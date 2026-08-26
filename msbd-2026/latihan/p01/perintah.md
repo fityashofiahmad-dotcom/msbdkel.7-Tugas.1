@@ -91,3 +91,46 @@ SHOW shared_buffers;
 * **Pertanyaan Wajib**
 1. Satu aktivitas yang menurut Anda lebih cepat dilakukan menggunakan psql.
 2. Satu aktivitas yang menurut Anda lebih cepat dilakukan menggunakan DBeaver.
+
+## 4. Restore Basis Data Pagila dan Verifikasi
+* **Letakkan pagila.dump di dalam direktori ./dump.**
+1. Buat database kosong
+docker compose exec postgres createdb -U msbd pagila
+2. Restore Pagila
+docker compose exec postgres pg_restore -U msbd -d pagila --no-owner /dump/pagila.dump
+3. Verifikasi tabel
+docker compose exec postgres psql -U msbd -d pagila -c "\dt"
+* **Query Verifikasi**
+1. V1-Jumlah tabel pada skema public
+SELECT count(*)
+FROM information_schema.tables
+WHERE table_schema = 'public'
+  AND table_type = 'BASE TABLE';
+* **Nilai rujukan: 21 tabel.**
+2. V2 — Sepuluh tabel terbesar beserta ukurannya
+SELECT relname,
+       pg_size_pretty(pg_total_relation_size(relid)) AS ukuran
+FROM pg_catalog.pg_statio_user_tables
+ORDER BY pg_total_relation_size(relid) DESC
+LIMIT 10;
+3. V3 — Lima film dengan jumlah penyewaan terbanyak
+SELECT f.title, count(*) AS total_sewa
+FROM rental r
+JOIN inventory i
+  ON i.inventory_id = r.inventory_id
+JOIN film f
+  ON f.film_id = i.film_id
+GROUP BY f.title
+ORDER BY total_sewa DESC
+LIMIT 5;
+4. V4 — Melihat rencana eksekusi query
+EXPLAIN ANALYZE
+SELECT f.title, count(*)
+FROM rental r
+JOIN inventory i
+  ON i.inventory_id = r.inventory_id
+JOIN film f
+  ON f.film_id = i.film_id
+GROUP BY f.title;
+* **Salin hasilnya ke laporan, kemudian lengkapi kalimat berikut:**
+“Yang paling membingungkan dari keluaran ini adalah __________.”

@@ -15,15 +15,14 @@
 ---
 
 ## 3. Pertanyaan Langkah 2 (Menyusun dan Menjalankan Docker Compose)
-**[TUGAS RIZAL: Jawab 4 pertanyaan di bawah ini]**
 1. **Apa yang terjadi jika bagian `volumes:` pada layanan PostgreSQL dihapus, kemudian container dihentikan menggunakan `docker compose down -v`?**
-   * [ISI JAWABANMU DI SINI]
+   * Volume digunakan agar data PostgreSQL tetap tersimpan meskipun container dihentikan. Jika bagian `volumes` dihapus dan dihentikan dengan `down -v`, maka seluruh data di dalam database akan hilang dan kita harus memulai dari awal (database kosong).
 2. **Mengapa pemetaan port ditulis "5432:5432" dan bukan cukup satu angka? Apa yang harus diubah apabila komputer Anda sudah memiliki PostgreSQL lain yang menggunakan port 5432?**
-   * [ISI JAWABANMU DI SINI]
+   * Penulisan "5432:5432" berarti port host 5432 (kiri) diarahkan ke port PostgreSQL 5432 di dalam container (kanan). Apabila port 5432 di komputer (host) sudah digunakan, kita harus mengubah angka di sebelah kiri menjadi port yang kosong, misalnya `"5433:5432"`.
 3. **Apa fungsi blok healthcheck? Mengapa healthcheck penting ketika terdapat layanan lain yang bergantung pada basis data?**
-   * [ISI JAWABANMU DI SINI]
+   * Fungsi `healthcheck` adalah untuk memastikan PostgreSQL benar-benar sudah siap menerima koneksi. Hal ini penting agar layanan atau aplikasi lain yang bergantung pada database tidak *crash* atau *error* saat mencoba terhubung sebelum database selesai melakukan proses *startup*.
 4. **Menyimpan password langsung di dalam `docker-compose.yml` merupakan praktik yang kurang baik. Sebutkan satu cara yang lebih aman dan jelaskan mengapa hal tersebut penting ketika berkas masuk ke repositori Git.**
-   * [ISI JAWABANMU DI SINI]
+   * Cara yang lebih aman adalah menggunakan berkas `.env` untuk menyimpan kredensial, kemudian memanggilnya sebagai variabel di dalam `docker-compose.yml`. Hal ini penting karena berkas `.env` dimasukkan ke `.gitignore` sehingga *password* tidak akan ikut ter-upload dan terbaca oleh publik saat masuk ke repositori Git.
 
 ---
 

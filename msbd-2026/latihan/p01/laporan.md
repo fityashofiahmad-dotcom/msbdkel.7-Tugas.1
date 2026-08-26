@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Laporan Praktikum P01
 
 ## 1. Verifikasi Docker & Docker Compose
@@ -72,3 +73,67 @@ Schema `public` juga berhasil ditampilkan pada DBeaver. Pada tahap ini bagian `T
 
 Keberhasilan koneksi ini menunjukkan bahwa DBeaver dapat berkomunikasi dengan PostgreSQL yang berjalan di dalam Docker.
 
+## 7. Menjalankan Query PostgreSQL melalui DBeaver
+
+![SELECT version melalui DBeaver](./bukti/05-dbeaver-query.png)
+
+### Langkah-langkah:
+1. Membuka aplikasi **DBeaver Community Edition**.
+2. Memilih koneksi database `latihan` yang sebelumnya telah dibuat.
+3. Membuka **SQL Editor** pada koneksi PostgreSQL.
+4. Menuliskan query berikut:
+
+```sql
+SELECT version();
+```
+
+## 8. Perbandingan Penggunaan psql dan DBeaver
+
+### 8.1 Aktivitas yang Lebih Cepat Menggunakan psql
+
+Menurut saya, aktivitas yang lebih cepat dilakukan menggunakan `psql` adalah menjalankan perintah atau query SQL secara langsung melalui terminal. Dengan `psql`, saya dapat langsung mengetik perintah tanpa harus membuka atau memilih menu pada antarmuka grafis.
+
+Contohnya adalah ketika melakukan pengecekan database menggunakan perintah:
+
+```text
+\l
+\dt
+\dn
+\du
+```
+=======
+\# Laporan Latihan Mandiri Pertemuan 1
+
+\## Menyiapkan Lingkungan Kerja Basis Data
+
+
+
+\### V3 — Lima Film dengan Jumlah Penyewaan Terbanyak
+
+
+
+Query:
+
+
+
+```sql
+
+SELECT f.title, count(\*) AS total\_sewa
+
+FROM rental r
+
+JOIN inventory i
+
+&#x20; ON i.inventory\_id = r.inventory\_id
+
+JOIN film f
+
+&#x20; ON f.film\_id = i.film\_id
+
+GROUP BY f.title
+
+ORDER BY total\_sewa DESC
+
+LIMIT 5;
+
+>>>>>>> 8cbc06bc8a820b09f188f512511908afde83bc95

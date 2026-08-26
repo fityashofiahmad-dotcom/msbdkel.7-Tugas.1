@@ -169,4 +169,35 @@ git push -u origin main
  1. Berkas dump, kredensial, dan .env tidak boleh dimasukkan ke repositori.
  2. Setiap anggota tim melakukan commit menggunakan akun masing-masing.
  3. Gunakan pesan commit yang menjelaskan perubahan, misalnya feat:, fix:, docs:, atau chore:.
- 
+
+ ## 6. Pengumpulan Hasil
+ * **Buat laporan dalam format Markdown dan simpan di repositori tim pada:**
+ latihan/p01/laporan.md
+ * **Isi Minimal Laporan**
+ ☐ Keluaran docker --version
+
+☐ Keluaran docker compose version
+
+☐ Keluaran docker compose ps
+
+☐ Keluaran SELECT version();
+
+☐ Jawaban tiga pertanyaan tentang Image, Container, dan Volume
+
+☐ Jawaban empat pertanyaan pada Langkah 2
+
+☐ Perbandingan penggunaan psql dan DBeaver
+
+☐ Hasil query V1
+
+☐ Hasil query V2
+
+☐ Hasil query V3
+
+☐ Hasil V4 — EXPLAIN ANALYZE
+
+☐ Kalimat: “Yang paling membingungkan dari keluaran ini adalah ...”
+
+☐ Tautan repositori Git tim
+
+☐ Daftar commit masing-masing anggota

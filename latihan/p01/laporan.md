@@ -72,3 +72,16 @@ Schema `public` juga berhasil ditampilkan pada DBeaver. Pada tahap ini bagian `T
 
 Keberhasilan koneksi ini menunjukkan bahwa DBeaver dapat berkomunikasi dengan PostgreSQL yang berjalan di dalam Docker.
 
+## 7. Menjalankan Query PostgreSQL melalui DBeaver
+
+![SELECT version melalui DBeaver](./bukti/05-dbeaver-query.png)
+
+### Langkah-langkah:
+1. Membuka aplikasi **DBeaver Community Edition**.
+2. Memilih koneksi database `latihan` yang sebelumnya telah dibuat.
+3. Membuka **SQL Editor** pada koneksi PostgreSQL.
+4. Menuliskan query berikut:
+
+```sql
+SELECT version();
+```

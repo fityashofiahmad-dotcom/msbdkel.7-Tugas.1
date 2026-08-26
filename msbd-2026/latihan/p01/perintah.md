@@ -134,3 +134,39 @@ JOIN film f
 GROUP BY f.title;
 * **Salin hasilnya ke laporan, kemudian lengkapi kalimat berikut:**
 “Yang paling membingungkan dari keluaran ini adalah __________.”
+
+## 5. Menyiapkan Repositori Git Tim
+* **Gunakan repositori tim yang akan dipakai untuk menyimpan hasil latihan dan artefak pembelajaran selama semester.**
+Gunakan struktur berikut:
+msbd-2026/
+├── docker-compose.yml
+├── .gitignore
+├── README.md
+├── dump/
+├── latihan/
+│   └── p01/
+│       ├── perintah.md
+│       ├── verifikasi.sql
+│       ├── laporan.md
+│       └── bukti/
+└── proyek/
+    └── docs/
+* **Inisialisasi Git**
+git init
+
+printf 'dump/\n*.dump\n.env\n.DS_Store\n' > .gitignore
+
+git add .
+
+git commit -m "chore: menyiapkan lingkungan MSBD"
+
+git branch -M main
+
+git remote add origin <URL repositori tim>
+
+git push -u origin main
+ * **Aturan Repositori**
+ 1. Berkas dump, kredensial, dan .env tidak boleh dimasukkan ke repositori.
+ 2. Setiap anggota tim melakukan commit menggunakan akun masing-masing.
+ 3. Gunakan pesan commit yang menjelaskan perubahan, misalnya feat:, fix:, docs:, atau chore:.
+ 

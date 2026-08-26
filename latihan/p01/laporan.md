@@ -40,3 +40,35 @@ docker compose exec postgres psql -U msbd -d latihan
 ```bash
 docker compose exec postgres psql -U msbd -d latihan
 ```
+
+## 6. Uji Koneksi PostgreSQL melalui DBeaver
+
+![Koneksi PostgreSQL melalui DBeaver](./bukti/04-dbeaver-koneksi.png)
+
+### Langkah-langkah:
+1. Membuka aplikasi **DBeaver Community Edition**.
+2. Memilih menu **New Database Connection** untuk membuat koneksi baru.
+3. Memilih **PostgreSQL** sebagai jenis database.
+4. Mengisi konfigurasi koneksi sebagai berikut:
+
+| Parameter | Nilai |
+|---|---|
+| Host | `localhost` |
+| Port | `5432` |
+| Database | `latihan` |
+| Username | `msbd` |
+
+5. Memasukkan password PostgreSQL sesuai dengan konfigurasi Docker Compose.
+6. Memilih **Test Connection** untuk menguji koneksi.
+7. Setelah koneksi berhasil, memilih **Finish**.
+8. Membuka koneksi database `latihan` pada bagian **Database Navigator**.
+9. Membuka bagian **Schemas**.
+10. Membuka schema `public` untuk melihat objek database.
+
+### Hasil:
+Koneksi PostgreSQL melalui DBeaver berhasil dilakukan. Database `latihan` dapat diakses menggunakan host `localhost` dan port `5432`.
+
+Schema `public` juga berhasil ditampilkan pada DBeaver. Pada tahap ini bagian `Tables` masih kosong karena database `latihan` belum memiliki tabel.
+
+Keberhasilan koneksi ini menunjukkan bahwa DBeaver dapat berkomunikasi dengan PostgreSQL yang berjalan di dalam Docker.
+

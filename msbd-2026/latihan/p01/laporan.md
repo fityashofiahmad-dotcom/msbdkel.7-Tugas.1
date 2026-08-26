@@ -8,16 +8,13 @@
 * **Keluaran docker compose version:**
 ![Docker Compose Version](./bukti/docker-compose-version.png)
 
-
-## 2. Verifikasi Database
-
-## 3. Pertanyaan Pemahaman (Image, Container, dan Volume)
+## 2. Pertanyaan Pemahaman (Image, Container, dan Volume)
 1. **Docker Image:** Template atau blueprint yang berisi instruksi lengkap tapi masih bersifat read-only.
 2. **Container:** Wujud nyata atau aplikasi yang lagi berjalan (runtime) dari sebuah Docker Image.
 3. **Volume:** Media penyimpanan data khusus yang dibuat supaya data tetap aman dan persisten (menetap) walaupun containernya dihapus atau dimatikan.
 
 
-## 4. Uji Koneksi PostgreSQL melalui CLI (psql)
+## 3. Uji Koneksi PostgreSQL melalui CLI (psql)
 
 ![Koneksi PostgreSQL melalui psql](./bukti/02-psql-koneksi.png)
 
@@ -30,7 +27,7 @@
 docker compose exec postgres psql -U msbd -d latihan
 ```
 
-## 5. Pemeriksaan Versi PostgreSQL melalui CLI (psql)
+## 4. Pemeriksaan Versi PostgreSQL melalui CLI (psql)
 
 ![PostgreSQL Version melalui psql](./bukti/03-psql-version.png)
 
@@ -42,7 +39,7 @@ docker compose exec postgres psql -U msbd -d latihan
 docker compose exec postgres psql -U msbd -d latihan
 ```
 
-## 6. Uji Koneksi PostgreSQL melalui DBeaver
+## 5. Uji Koneksi PostgreSQL melalui DBeaver
 
 ![Koneksi PostgreSQL melalui DBeaver](./bukti/04-dbeaver-koneksi.png)
 
@@ -73,7 +70,7 @@ Schema `public` juga berhasil ditampilkan pada DBeaver. Pada tahap ini bagian `T
 
 Keberhasilan koneksi ini menunjukkan bahwa DBeaver dapat berkomunikasi dengan PostgreSQL yang berjalan di dalam Docker.
 
-## 7. Menjalankan Query PostgreSQL melalui DBeaver
+## 6. Menjalankan Query PostgreSQL melalui DBeaver
 
 ![SELECT version melalui DBeaver](./bukti/05-dbeaver-query.png)
 
@@ -87,9 +84,9 @@ Keberhasilan koneksi ini menunjukkan bahwa DBeaver dapat berkomunikasi dengan Po
 SELECT version();
 ```
 
-## 8. Perbandingan Penggunaan psql dan DBeaver
+## 7. Perbandingan Penggunaan psql dan DBeaver
 
-### 8.1 Aktivitas yang Lebih Cepat Menggunakan psql
+### 7.1 Aktivitas yang Lebih Cepat Menggunakan psql
 
 Menurut saya, aktivitas yang lebih cepat dilakukan menggunakan `psql` adalah menjalankan perintah atau query SQL secara langsung melalui terminal. Dengan `psql`, saya dapat langsung mengetik perintah tanpa harus membuka atau memilih menu pada antarmuka grafis.
 

@@ -1,4 +1,4 @@
-# Laporan Praktikum P010
+# Laporan Praktikum P01
 
 ## 1. Verifikasi Docker & Docker Compose
 * **Keluaran docker --version:**

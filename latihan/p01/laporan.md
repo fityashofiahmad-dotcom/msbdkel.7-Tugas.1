@@ -85,3 +85,18 @@ Keberhasilan koneksi ini menunjukkan bahwa DBeaver dapat berkomunikasi dengan Po
 ```sql
 SELECT version();
 ```
+
+## 8. Perbandingan Penggunaan psql dan DBeaver
+
+### 8.1 Aktivitas yang Lebih Cepat Menggunakan psql
+
+Menurut saya, aktivitas yang lebih cepat dilakukan menggunakan `psql` adalah menjalankan perintah atau query SQL secara langsung melalui terminal. Dengan `psql`, saya dapat langsung mengetik perintah tanpa harus membuka atau memilih menu pada antarmuka grafis.
+
+Contohnya adalah ketika melakukan pengecekan database menggunakan perintah:
+
+```text
+\l
+\dt
+\dn
+\du
+```

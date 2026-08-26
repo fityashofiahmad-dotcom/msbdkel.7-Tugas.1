@@ -65,3 +65,29 @@ docker compose logs postgres | tail -20
 2. Mengapa pemetaan port ditulis "5432:5432" dan bukan cukup satu angka? Apa yang harus diubah apabila komputer Anda sudah memiliki PostgreSQL lain yang menggunakan port 5432?
 3. Apa fungsi blok healthcheck? Mengapa healthcheck penting ketika terdapat layanan lain yang bergantung pada basis data?
 4. Menyimpan password langsung di dalam docker-compose.yml merupakan praktik yang kurang baik. Sebutkan satu cara yang lebih aman dan jelaskan mengapa hal tersebut penting ketika berkas masuk ke repositori Git.
+
+## 3. Mengakses PostgreSQL melalui psql dan DBeaver.
+1. **Menggunakan psql**
+* **Masuk ke PosgreSQL:**
+docker compose exec postgres psql -U msbd -d latihan
+* **Jalankan perintah berikut:**
+SELECT version();
+
+\l
+\dt
+\dn
+\du
+
+SHOW data_directory;
+SHOW shared_buffers;
+
+\timing on
+\q
+2. **Menggunakan DBeaver**
+* **Buat koneksi PostgreSQL baru di DBeaver.**
+* **Hubungkan ke database latihan.**
+* **Telusuri skema public.**
+* **Buka bagian ER Diagram.**
+* **Pertanyaan Wajib**
+1. Satu aktivitas yang menurut Anda lebih cepat dilakukan menggunakan psql.
+2. Satu aktivitas yang menurut Anda lebih cepat dilakukan menggunakan DBeaver.

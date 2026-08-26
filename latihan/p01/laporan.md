@@ -27,4 +27,16 @@
 
 ```bash
 docker compose exec postgres psql -U msbd -d latihan
+```
 
+## 5. Pemeriksaan Versi PostgreSQL melalui CLI (psql)
+
+![PostgreSQL Version melalui psql](./bukti/03-psql-version.png)
+
+### Langkah-langkah:
+1. Membuka Terminal atau PowerShell.
+2. Masuk ke PostgreSQL menggunakan perintah:
+
+```bash
+docker compose exec postgres psql -U msbd -d latihan
+```

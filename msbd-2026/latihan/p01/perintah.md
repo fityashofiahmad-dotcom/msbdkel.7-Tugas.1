@@ -201,3 +201,17 @@ git push -u origin main
 ☐ Tautan repositori Git tim
 
 ☐ Daftar commit masing-masing anggota
+
+## 7. Tantangan Tambahan
+* **Jika seluruh langkah utama sudah selesai, buat tabel dengan dua juta baris:**
+CREATE TABLE besar AS
+SELECT g AS id,
+       md5(g::text) AS nilai
+FROM generate_series(1, 2000000) g;
+* **Kemudian bandingkan waktu pencarian sebelum dan sesudah index dibuat:**
+SELECT *
+FROM besar
+WHERE nilai = '...';
+
+CREATE INDEX ON besar(nilai);
+* **Catat perbedaan waktu yang Anda peroleh. Hasil eksperimen ini akan membantu memahami materi tentang index dan optimasi query pada pertemuan berikutnya.**

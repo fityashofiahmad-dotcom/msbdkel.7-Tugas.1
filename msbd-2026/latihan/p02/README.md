@@ -4,7 +4,7 @@
 1. Andika Chairul Ilham - 251402047
 2. Fahri Arizal - 251402102
 3. Fitya Shofi Ahmad - 251402132
-4. Mar 251402
+4. Mar'ie Rizqullah 251402129
 
 ## 3. Cara menjalankan Docker Compose
 

@@ -120,7 +120,8 @@ Seorang anggota kelompok mengubah isi V1__skema_awal.sql setelah migration terse
 
 ## 5. Evolusi skema yang aman.
 
-* **Anggap muncul kebutuhan baru: setiap peminjaman harus menyimpan nama petugas yang melayani.Karena tabel mungkin sudah memiliki data, perubahan dilakukan melalui tiga migration terpisah.**
+Note: Anggap muncul kebutuhan baru: setiap peminjaman harus menyimpan nama petugas yang melayani.
+Karena tabel mungkin sudah memiliki data, perubahan dilakukan melalui tiga migration terpisah.
 
 ### Migration 1 - Tambahkan Kolom Nullable
 -- V3__petugas_langkah1_tambah_nullable.sql
@@ -169,3 +170,26 @@ WHERE datname = 'proyek_dev';
 latihan/p02/bukti/pg-stat-activity.png
 * **Pertanyaan 6**
 Catat apa yang terlihat pada pg_stat_activity. Perintah mana yang menunggu? Apa akibatnya jika kondisi tersebut terjadi pada basis data produksi saat banyak pengguna sedang mengakses sistem?
+
+## 6. Membuat Seed data idempoten
+
+Note: Seed data harus dapat dijalankan berkali-kali tanpa menghasilkan data ganda.
+* **Buat file:**
+latihan/p02/seeds/01_peran.sql
+* **Jalankan 2x:**
+for i in 1 2; do
+  docker compose exec -T postgres \
+  psql -U postgres -d proyek_dev \
+  < latihan/p02/seeds/01_peran.sql
+done
+* **Periksa jumlah baris:**
+docker compose exec postgres \
+psql -U postgres -d proyek_dev \
+-c "SELECT count(*) FROM peran;"
+ 
+Note: Jika menggunakan data contoh di atas, jumlah baris harus tetap 3 meskipun seed dijalankan dua kali.
+
+* **Simpan bukti hasilnya pada folder:**
+latihan/p02/bukti/
+* **Pertanyaan 7**
+Mengapa seed data tidak diletakkan langsung di dalam migrations/? Sebutkan satu perbedaan sifat antara migration dan seed data.

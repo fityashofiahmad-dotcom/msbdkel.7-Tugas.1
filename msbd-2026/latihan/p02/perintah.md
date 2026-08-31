@@ -27,12 +27,12 @@ syarat Domain:
 
 Note: Hindari domain yang terlalu luas.
 
-### B. Menuliskan lingkup.
+### B. Menuliskan Lingkup.
 * **Buat:**
 latihan/p02/kebutuhan.md
 * **Menuliskan bagian TERMASUK dan TIDAK TERMASUK, masing-masing minimal 4 poin.**
 
-### C. Menuliskan minimal 8 kebutuhan data.
+### C. Menuliskan Minimal 8 Kebutuhan Data.
 * **Gunakan format KD-01, KD-02, KD-03,...**
 * **Setiap kebutuhan wajib memuat:**
 1. Deskripsi
@@ -63,3 +63,57 @@ latihan/p02/erd.png
 Mengapa Peminjaman dan Unit Alat pada contoh tidak dihubungkan langsung, tetapi melalui Baris Pinjam? Apa yang hilang jika hubungan dibuat langsung?
 * **Pertanyaan 4**
 Apa perbedaan antara entitas Alat dan Unit Alat? Sebutkan satu pertanyaan bisnis yang hanya dapat dijawab jika keduanya dipisahkan.
+
+## 4. Membuat migrasi skema berversi
+
+* **Gunakan Flyway melalui Docker untuk mengelola migration.
+### A. Menyiapkan Struktur Folder
+latihan/
+└── p02/
+    ├── kebutuhan.md
+    ├── erd.png
+    ├── migrations/
+    │   └── V1__skema_awal.sql
+    ├── seeds/
+    ├── bukti/
+    ├── laporan.md
+    └── README.md
+
+### B. Menambahkan Flyway
+* **Tambahkan service Flyway pada docker-compose.yml
+flyway:
+  image: flyway/flyway:11
+  depends_on:
+    - postgres
+  volumes:
+    - ./latihan/p02/migrations:/flyway/sql
+  command: >
+    -url=jdbc:postgresql://postgres:5432/proyek_dev
+    -user=postgres
+    -password=postgres
+    -connectRetries=10
+    migrate
+
+### C. Membuat Migration Pertama
+* **Terjemahkan sebagian ERD menjadi DDL. Gunakan sekitar 3–4 tabel inti pada migration pertama.**
+* **Buat file:**
+latihan/p02/migrations/V1__skema_awal.sql
+
+### D. Menjalankan Migration
+docker compose run --rm flyway migrate
+docker compose run --rm flyway info
+* **Periksa riwayat migration:**
+docker compose exec postgres psql -U postgres -d proyek_dev -c \
+"SELECT installed_rank, version, description, success
+FROM flyway_schema_history
+ORDER BY installed_rank;"
+* **Simpan screenshot hasil flyway info dan riwayat migration ke folder latihan/p02/bukti/.**
+
+### E. Membuktikan Database Dapat Dibangun Ulang
+docker compose exec postgres psql -U postgres -c \
+"DROP DATABASE proyek_dev; CREATE DATABASE proyek_dev;"
+docker compose run --rm flyway migrate
+docker compose run --rm flyway info
+* **Simpan bukti hasil rebuild ke folder bukti/ .**
+* **Pertanyaan 5**
+Seorang anggota kelompok mengubah isi V1__skema_awal.sql setelah migration tersebut sudah diterapkan, kemudian melakukan push ke repositori. Apa yang terjadi ketika anggota lain menjalankan migration? Jelaskan penyebab error dan cara memperbaikinya tanpa menghapus riwayat migration.

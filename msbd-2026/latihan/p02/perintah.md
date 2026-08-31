@@ -4,12 +4,10 @@
 
 * **Menjalankan Docker Compose dari repositori kelompok**
 docker compose up -d
-
 docker compose ps
 * **Membuat 2 database baru untuk latihan:**
 docker compose exec postgres psql -U postgres -c \
 "CREATE DATABASE proyek_dev;"
-
 docker compose exec postgres psql -U postgres -c \
 "CREATE DATABASE proyek_test;"
 * **Memverifikasi:**
@@ -45,3 +43,23 @@ latihan/p02/kebutuhan.md
 6. Prioritas
 * **Pertanyaan 2**
 Pilih satu kebutuhan yang memiliki aturan paling rumit. Menurut kelompok kalian, apakah aturan tersebut lebih tepat ditegakkan menggunakan constraint, trigger, atau kode aplikasi? Berikan satu alasan.
+
+## 3. Membuat ERD konseptual.
+
+* **Membuat ERD berdasarkan kebutuhan data kelompok.**
+
+syarat ERD:
+1. Minimal 6 entitas beserta atribut kunci alaminya.
+2. Kardinalitas pada setiap relasi.
+3. Relasi M:N yang sudah diuraikan menjadi entitas asosiatif.
+4. Notasi yang konsisten.
+5. Tidak memasukkan detail implementasi fisik.
+
+Note: Jangan masukkan detail fisik seperti bigint, varchar(120), created_at, atau nama index.
+
+* **Ekspor hasil akhir menjadi:**
+latihan/p02/erd.png
+* **Pertanyaan 3**
+Mengapa Peminjaman dan Unit Alat pada contoh tidak dihubungkan langsung, tetapi melalui Baris Pinjam? Apa yang hilang jika hubungan dibuat langsung?
+* **Pertanyaan 4**
+Apa perbedaan antara entitas Alat dan Unit Alat? Sebutkan satu pertanyaan bisnis yang hanya dapat dijawab jika keduanya dipisahkan.

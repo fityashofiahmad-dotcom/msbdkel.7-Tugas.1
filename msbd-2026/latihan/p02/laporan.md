@@ -63,7 +63,7 @@ Keputusan desain penting yang diambil kelompok adalah menghubungkan **Ticket ke 
 Perbedaan sifat utamanya adalah: Migration bersifat run-once (berjalan satu kali per versi untuk mengubah struktur/DDL), sedangkan Seed data bersifat re-runnable atau idempoten (dapat dijalankan berulang kali tanpa menyebabkan error atau duplikasi data, bertujuan untuk me-reset data awal/DML ke kondisi standar selama masa pengembangan).
 
 ## 11. Daftar kontribusi atau commit masing2 anggota kelompok.
-1. Andika Chairul Ilham - 
-2. Fahri Arizal -
-3. Fitya Shofi Ahmad - 
-4. Mar'ie Rizqullah - 
+1. Andika Chairul Ilham - langkah 3 + pertanyaan
+2. Fahri Arizal - langkah 6 + pertanyaan
+3. Fitya Shofi Ahmad - langkah 1 & 2 + pertanyaan
+4. Mar'ie Rizqullah - langkah 4 & 5 + pertanyaan

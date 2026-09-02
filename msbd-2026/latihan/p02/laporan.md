@@ -24,8 +24,8 @@ Sistem ini merumuskan 10 Kebutuhan Data (KD-01 hingga KD-10) yang terbagi menjad
 ## 10. Jawaban pertanyaan 1-7:
 1. 
 2. Dari 10 Kebutuhan data, kami mengambil KD-05 Jadwal Panggung (Stage_Schedule) dan Aturan jadwal bentrok ini paling cocok pakai Trigger. Alasannya, kalau cuma pakai constraint bawaan SQL kayak CHECK atau UNIQUE, database nggak bakal sanggup ngecek irisan jam tampil yang tumpang tindih antar-baris secara otomatis. Di sisi lain, kalau cuma diatur lewat kode aplikasi, data gampang banget kena race condition atau bobol kalau sewaktu-waktu ada yang akses database langsung di luar aplikasi. Jadi, trigger adalah pilihan paling aman karena sistem bakal otomatis ngecek dan nolak jadwal yang bentrok langsung di dalam database sebelum datanya sempat kesimpan.
-3. 
-4. 
+3. Satu transaksi peminjaman biasanya berisi lebih dari satu unit alat sekaligus (misalnya meminjam 3 unit dalam satu kali transaksi), dan satu unit alat bisa dipinjam berkali-kali pada peminjaman yang berbeda-beda. Ini adalah relasi many-to-many, yang tidak bisa direpresentasikan langsung antara dua entitas — harus diuraikan menjadi entitas asosiatif. Jika Peminjaman dan Unit Alat dihubungkan langsung (misalnya lewat foreign key tunggal), maka satu baris peminjaman hanya bisa mencatat satu unit alat saja, sehingga informasi "unit apa saja yang dipinjam dalam satu transaksi" akan hilang. Baris_Pinjam menyimpan detail per unit di dalam satu transaksi peminjaman, termasuk kemungkinan atribut tambahan seperti kondisi alat saat dipinjam per unit.
+4. Alat merepresentasikan jenis atau model alat secara umum (misalnya "Multimeter Digital"), sedangkan Unit_Alat merepresentasikan satu instance fisik dari jenis alat tersebut (misalnya unit dengan nomor seri tertentu, yang punya kondisi dan status sendiri — bisa dipinjam, sedang diperbaiki, atau tersedia). Satu Alat bisa memiliki banyak Unit_Alat.   Pemisahan ini penting karena kalau digabung, sistem tidak bisa membedakan antara "berapa jenis alat yang kami punya" dengan "berapa unit fisik yang tersedia untuk dipinjam saat ini". Contoh pertanyaan bisnis yang hanya bisa dijawab jika dipisah: "Berapa unit Multimeter Digital yang sedang dalam perbaikan saat ini, dari total unit yang kami miliki?" — pertanyaan ini butuh menghitung status per unit fisik (Unit_Alat.status), bukan sekadar mengetahui bahwa jenis alat "Multimeter Digital" itu ada.
 5. 
 6. Jawaban Pertanyaan 6
 Apa yang terlihat pada pg_stat_activity?
@@ -45,6 +45,7 @@ Bahayanya, setiap query apa pun (termasuk SELECT biasa dari pengguna lain) yang 
 
 Akibatnya, seluruh sistem atau fitur yang membaca tabel peminjaman akan hang (macet), koneksi database akan menumpuk (connection pool exhaustion), dan aplikasi dapat mengalami downtime hingga transaksi pertama di Terminal 1 selesai (commit/rollback) atau dimatikan secara paksa (kill).
 7. 
+8. 
 
 ## 11. Daftar kontribusi atau commit masing2 anggota kelompok.
 1. Andika Chairul Ilham - 

@@ -34,7 +34,6 @@ Perintah DDL ALTER TABLE peminjaman dari Terminal 2.
 Apa akibatnya jika kondisi tersebut terjadi pada basis data produksi saat banyak pengguna sedang mengakses sistem?
 Ini akan menyebabkan efek antrean fatal (Lock Stampede / Blocking).
 Perintah SELECT di Terminal 1 memegang Access Share Lock karena transaksinya belum di-COMMIT/ROLLBACK.
-
 Perintah ALTER TABLE membutuhkan Access Exclusive Lock (kunci mutlak) pada tabel peminjaman. Karena Terminal 1 masih menahan kuncinya, ALTER TABLE harus menunggu dalam antrean.
 
 Bahayanya, setiap query apa pun (termasuk SELECT biasa dari pengguna lain) yang masuk setelah ALTER TABLE juga akan ikut mengantre di belakang ALTER TABLE tersebut.

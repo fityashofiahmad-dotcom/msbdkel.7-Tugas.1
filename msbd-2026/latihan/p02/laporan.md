@@ -29,7 +29,6 @@ Sistem ini merumuskan 10 Kebutuhan Data (KD-01 hingga KD-10) yang terbagi menjad
 5. 
 6. Apa yang terlihat pada pg_stat_activity?
 Terdapat proses dari Terminal 2 yang memiliki kolom wait_event_type berisi Lock atau relation dan kolom state berstatus active (menunggu/waiting). Sementara itu, proses dari Terminal 1 (jika terlihat) berstatus idle in transaction.
-
 Perintah mana yang menunggu?
 Perintah DDL ALTER TABLE peminjaman dari Terminal 2.
 

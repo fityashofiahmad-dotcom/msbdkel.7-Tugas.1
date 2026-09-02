@@ -1,12 +1,3 @@
-# Laporan Tugas Praktik - Bagian [Nama Kamu]
-
-## Pertanyaan 5
-**Soal:** Seorang anggota kelompok mengubah isi V1__skema_awal.sql setelah migration tersebut sudah diterapkan, kemudian melakukan push ke repositori. Apa yang terjadi ketika anggota lain menjalankan migration? Jelaskan penyebab error dan cara memperbaikinya tanpa menghapus riwayat migration.
-
-**Jawaban:**
-Flyway akan menghasilkan *error* `Checksum mismatch` dan menolak menjalankan migrasi apa pun. 
-*   **Penyebab:** Flyway menghitung nilai *checksum* (hash) dari setiap file migrasi saat dieksekusi dan menyimpannya di database. Karena file V1 diubah, checksum file lokal tidak lagi cocok dengan checksum di database. Ini adalah mekanisme Flyway untuk mencegah inkonsistensi skema.
-*   **Cara memperbaiki:** Anggota yang mengalami error harus menjalankan perintah `flyway repair` (via Docker: `docker compose run --rm flyway repair`). Perintah ini akan menyelaraskan ulang nilai checksum di database agar sama dengan file lokal yang baru, tanpa menghapus riwayat yang sudah ada.
 
 ---
 

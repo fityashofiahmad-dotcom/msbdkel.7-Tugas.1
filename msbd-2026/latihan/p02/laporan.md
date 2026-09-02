@@ -21,6 +21,13 @@ Sistem ini merumuskan 10 Kebutuhan Data (KD-01 hingga KD-10) yang terbagi menjad
 
 ## 9. Pengamatan dari pg_stat_activity.
 
-## 10. Jawaban pertanyaan 1-7 dengan kalimat sendiri.
+## 10. Jawaban pertanyaan 1-7:
+1. 
+2. 
+3. 
+4. 
+5. 
+6. 
+7. 
 
 ## 11. Daftar kontribusi atau commit masing2 anggota kelompok.

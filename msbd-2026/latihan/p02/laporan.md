@@ -27,7 +27,23 @@ Sistem ini merumuskan 10 Kebutuhan Data (KD-01 hingga KD-10) yang terbagi menjad
 3. 
 4. 
 5. 
-6. 
+6. Jawaban Pertanyaan 6
+Apa yang terlihat pada pg_stat_activity?
+Terdapat proses dari Terminal 2 yang memiliki kolom wait_event_type berisi Lock atau relation dan kolom state berstatus active (menunggu/waiting). Sementara itu, proses dari Terminal 1 (jika terlihat) berstatus idle in transaction.
+
+Perintah mana yang menunggu?
+Perintah DDL ALTER TABLE peminjaman dari Terminal 2.
+
+Apa akibatnya jika kondisi tersebut terjadi pada basis data produksi saat banyak pengguna sedang mengakses sistem?
+Ini akan menyebabkan efek antrean fatal (Lock Stampede / Blocking).
+
+Perintah SELECT di Terminal 1 memegang Access Share Lock karena transaksinya belum di-COMMIT/ROLLBACK.
+
+Perintah ALTER TABLE membutuhkan Access Exclusive Lock (kunci mutlak) pada tabel peminjaman. Karena Terminal 1 masih menahan kuncinya, ALTER TABLE harus menunggu dalam antrean.
+
+Bahayanya, setiap query apa pun (termasuk SELECT biasa dari pengguna lain) yang masuk setelah ALTER TABLE juga akan ikut mengantre di belakang ALTER TABLE tersebut.
+
+Akibatnya, seluruh sistem atau fitur yang membaca tabel peminjaman akan hang (macet), koneksi database akan menumpuk (connection pool exhaustion), dan aplikasi dapat mengalami downtime hingga transaksi pertama di Terminal 1 selesai (commit/rollback) atau dimatikan secara paksa (kill).
 7. 
 
 ## 11. Daftar kontribusi atau commit masing2 anggota kelompok.

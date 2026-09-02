@@ -63,7 +63,7 @@ Keputusan desain penting yang diambil kelompok adalah menghubungkan **Ticket ke 
 Perbedaan sifat utamanya adalah sifat perubahan data: migration bersifat struktural, kronologis, dan permanen untuk membangun ulang bentuk database, sedangkan seed data bersifat opsional, fleksibel, dan fokus pada isi data yang dapat diubah atau dihapus ulang tanpa memengaruhi struktur tabel.
 
 ## 11. Daftar kontribusi atau commit masing2 anggota kelompok.
-1. Andika Chairul Ilham - 
-2. Fahri Arizal -
-3. Fitya Shofi Ahmad - 
-4. Mar'ie Rizqullah - 
+1. Andika Chairul Ilham - langkah 3 + pertanyaan
+2. Fahri Arizal - langkah 6 + pertanyaan
+3. Fitya Shofi Ahmad - langkah 1 & 2 + pertanyaan
+4. Mar'ie Rizqullah - langkah 4 & 5 + pertanyaan

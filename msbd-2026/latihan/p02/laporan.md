@@ -38,17 +38,7 @@ ERD konseptual sistem ini terdiri dari 7 entitas utama beserta 2 entitas asosiat
 
 Keputusan desain penting yang diambil kelompok adalah menghubungkan **Ticket ke Stage_Schedule**, bukan langsung ke Event. Hal ini didasari oleh aturan bisnis bahwa kapasitas kuota dihitung berdasarkan kombinasi Venue dan Event tertentu, bukan Event secara keseluruhan — sehingga satu event yang berlangsung di beberapa panggung/venue dapat memiliki kuota tiket yang divalidasi secara terpisah per panggung.
 
-## 5. Keluaran atau ringkasan status migration.
-
-## 6. Bukti database dapat dibangun ulang menggunakan migration.
-
-## 7. Bukti pola 3 langkah penambahan kolom NOT NULL.
-
-## 8. Hasil seed data setelah dijalankan 2 kali.
-
-## 9. Pengamatan dari pg_stat_activity.
-
-## 10. Jawaban pertanyaan 1-7:
+## 5. Jawaban pertanyaan 1-7:
 1. Lingkungan pengujian memerlukan basis data terpisah untuk mengisolasi data uji dari lingkungan produksi agar manipulasi atau kesalahan data tidak merusak data utama. Selain itu, pemisahan ini memastikan konfigurasi, hak akses, dan siklus penghapusan data dapat dikelola secara independen tanpa risiko saling mengganggu.
 2. Dari 10 Kebutuhan data, kami mengambil KD-05 Jadwal Panggung (Stage_Schedule) dan Aturan jadwal bentrok ini paling cocok pakai Trigger. Alasannya, kalau cuma pakai constraint bawaan SQL kayak CHECK atau UNIQUE, database nggak bakal sanggup ngecek irisan jam tampil yang tumpang tindih antar-baris secara otomatis. Di sisi lain, kalau cuma diatur lewat kode aplikasi, data gampang banget kena race condition atau bobol kalau sewaktu-waktu ada yang akses database langsung di luar aplikasi. Jadi, trigger adalah pilihan paling aman karena sistem bakal otomatis ngecek dan nolak jadwal yang bentrok langsung di dalam database sebelum datanya sempat kesimpan.
 3. Entitas Artist dan Stage_Schedule (atau Ticket dan Merchandise) tidak dihubungkan secara langsung, melainkan melalui entitas asosiatif seperti Lineup (atau PreOrder). Hubungan ini bersifat many-to-many (banyak ke banyak), di mana satu artis dapat tampil di banyak jadwal panggung yang berbeda, dan satu jadwal panggung juga dapat diisi oleh banyak artis (misalnya kolaborasi). Jika dihubungkan secara langsung tanpa entitas asosiatif, kita akan kehilangan kemampuan untuk mencatat atribut relasi yang spesifik, seperti urutan tampil (urutan_tampil) artis pada jadwal tertentu.
@@ -62,7 +52,7 @@ Keputusan desain penting yang diambil kelompok adalah menghubungkan **Ticket ke 
 7. Seed data tidak diletakkan langsung di dalam folder migrations/ karena memiliki tujuan dan siklus hidup yang berbeda dari migrasi skema.
 Perbedaan sifat utamanya adalah: Migration bersifat run-once (berjalan satu kali per versi untuk mengubah struktur/DDL), sedangkan Seed data bersifat re-runnable atau idempoten (dapat dijalankan berulang kali tanpa menyebabkan error atau duplikasi data, bertujuan untuk me-reset data awal/DML ke kondisi standar selama masa pengembangan).
 
-## 11. Daftar kontribusi atau commit masing2 anggota kelompok.
+## 6. Daftar kontribusi atau commit masing2 anggota kelompok.
 1. Andika Chairul Ilham - langkah 3 + pertanyaan
 2. Fahri Arizal - langkah 6 + pertanyaan
 3. Fitya Shofi Ahmad - langkah 1 & 2 + pertanyaan

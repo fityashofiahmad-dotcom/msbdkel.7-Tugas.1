@@ -32,8 +32,8 @@ Sistem ini merumuskan 10 Kebutuhan Data (KD-01 hingga KD-10) yang terbagi menjad
 6. *   **Apa yang terlihat:** Terdapat antrean proses. Transaksi dari Terminal 1 berstatus `idle in transaction` (menahan kunci), sementara query dari Terminal 2 memiliki `wait_event_type` berupa `Lock` dengan `state` berstatus `active` (menunggu).
 *   **Perintah yang menunggu:** Perintah DDL `ALTER TABLE peminjaman...` dari Terminal 2.
 *   **Akibat pada sistem produksi:** Terjadi efek *Lock Stampede*. Perintah `ALTER TABLE` membutuhkan *Access Exclusive Lock* sehingga harus antre di belakang Terminal 1. Bahayanya, setiap query pengguna lain yang masuk *setelah* `ALTER TABLE` tersebut juga akan ikut dipaksa mengantre. Akibatnya sistem akan macet (*hang*), koneksi menumpuk, dan aplikasi bisa *down* sampai transaksi awal di-commit/rollback.
-7. 
-8. 
+7. Seed data tidak diletakkan di dalam migrations karena migrations berfokus pada perubahan struktur skema basis data secara bertahap (seperti membuat tabel atau kolom), sedangkan seed data berfokus pada pengisian data awal atau data dummy untuk keperluan operasional maupun pengujian.
+Perbedaan sifat utamanya adalah sifat perubahan data: migration bersifat struktural, kronologis, dan permanen untuk membangun ulang bentuk database, sedangkan seed data bersifat opsional, fleksibel, dan fokus pada isi data yang dapat diubah atau dihapus ulang tanpa memengaruhi struktur tabel.
 
 ## 11. Daftar kontribusi atau commit masing2 anggota kelompok.
 1. Andika Chairul Ilham - 

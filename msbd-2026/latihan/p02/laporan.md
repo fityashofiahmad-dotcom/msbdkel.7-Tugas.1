@@ -31,3 +31,7 @@ Sistem ini merumuskan 10 Kebutuhan Data (KD-01 hingga KD-10) yang terbagi menjad
 7. 
 
 ## 11. Daftar kontribusi atau commit masing2 anggota kelompok.
+1. Andika Chairul Ilham - 
+2. Fahri Arizal -
+3. Fitya Shofi Ahmad - 
+4. Mar'ie Rizqullah - 

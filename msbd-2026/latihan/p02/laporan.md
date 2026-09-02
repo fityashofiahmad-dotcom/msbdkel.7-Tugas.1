@@ -31,7 +31,6 @@ Sistem ini merumuskan 10 Kebutuhan Data (KD-01 hingga KD-10) yang terbagi menjad
 Terdapat proses dari Terminal 2 yang memiliki kolom wait_event_type berisi Lock atau relation dan kolom state berstatus active (menunggu/waiting). Sementara itu, proses dari Terminal 1 (jika terlihat) berstatus idle in transaction.
 Perintah mana yang menunggu?
 Perintah DDL ALTER TABLE peminjaman dari Terminal 2.
-
 Apa akibatnya jika kondisi tersebut terjadi pada basis data produksi saat banyak pengguna sedang mengakses sistem?
 Ini akan menyebabkan efek antrean fatal (Lock Stampede / Blocking).
 

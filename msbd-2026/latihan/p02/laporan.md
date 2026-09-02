@@ -10,6 +10,7 @@ Sistem Manajemen Festival Musik dirancang untuk mengelola seluruh siklus operasi
 Sistem ini merumuskan 10 Kebutuhan Data (KD-01 hingga KD-10) yang terbagi menjadi 2 kategori utama. Kelompok inti mencakup pengelolaan data entitas dasar (Venue, Artist, Event, Customer), serta data operasional kruisal seperti Lineup Artis, Stage_Schedule untuk pencegahan jadwal bentrok, Transaksi Tickte, dan Validasi Kapasitas. Sementara itu, kelompok pendukung berfokus pada fitur komersial melalui Manajemen Merchandise dan Pemesanan Merchandise Pre-Order. Seluruh kebutuhan ini dirancang terintegrasi untuk menjaga integritas data dan mengotomatisasi aturan bisnis yang kompleks.
 
 ## 4. Penjelasan singkat ERD.
+ERD (Entity Relationship Diagram) adalah diagram visual yang digunakan untuk memodelkan struktur data dan hubungan antar data dalam sebuah sistem basis data. ERD membantu pengembang melihat bagaimana entitas-entitas penting (seperti pengguna, produk, atau transaksi) saling terhubung melalui atribut dan relasi tertentu sebelum diimplementasikan ke dalam database.
 
 ## 5. Keluaran atau ringkasan status migration.
 

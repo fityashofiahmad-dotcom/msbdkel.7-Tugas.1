@@ -1,6 +1,6 @@
 ## 1. Nama Domain dan alasan kelompok memilih domain tersebut.
 
-## 2. Ringkasan lingkupsistem.
+## 2. Ringkasan lingkup sistem.
 
 ## 3. Ringkasan kebutuhan data yang dibuat.
 

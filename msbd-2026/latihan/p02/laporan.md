@@ -10,7 +10,33 @@ Sistem Manajemen Festival Musik dirancang untuk mengelola seluruh siklus operasi
 Sistem ini merumuskan 10 Kebutuhan Data (KD-01 hingga KD-10) yang terbagi menjadi 2 kategori utama. Kelompok inti mencakup pengelolaan data entitas dasar (Venue, Artist, Event, Customer), serta data operasional kruisal seperti Lineup Artis, Stage_Schedule untuk pencegahan jadwal bentrok, Transaksi Tickte, dan Validasi Kapasitas. Sementara itu, kelompok pendukung berfokus pada fitur komersial melalui Manajemen Merchandise dan Pemesanan Merchandise Pre-Order. Seluruh kebutuhan ini dirancang terintegrasi untuk menjaga integritas data dan mengotomatisasi aturan bisnis yang kompleks.
 
 ## 4. Penjelasan singkat ERD.
-ERD (Entity Relationship Diagram) adalah diagram visual yang digunakan untuk memodelkan struktur data dan hubungan antar data dalam sebuah sistem basis data. ERD membantu pengembang melihat bagaimana entitas-entitas penting (seperti pengguna, produk, atau transaksi) saling terhubung melalui atribut dan relasi tertentu sebelum diimplementasikan ke dalam database.
+
+![ERD Sistem Manajemen Festival Musik](erd.png)
+
+ERD konseptual sistem ini terdiri dari 7 entitas utama beserta 2 entitas asosiatif untuk menguraikan relasi many-to-many, sehingga total terdapat 9 entitas.
+
+**Entitas utama:**
+- **Venue** — menyimpan data lokasi/panggung, meliputi nama venue, kota, dan kapasitas maksimal.
+- **Artist** — menyimpan data pengisi acara, meliputi nama artist dan genre.
+- **Event** — menyimpan data konser atau festival, meliputi nama event, tanggal mulai, dan tanggal selesai.
+- **Stage_Schedule** — menyimpan jadwal tampil di suatu panggung, meliputi nama panggung, waktu mulai, dan waktu selesai. Entitas ini menjadi penghubung antara Event dan Venue, sehingga satu event dapat memiliki banyak jadwal panggung yang tersebar di venue berbeda.
+- **Customer** — menyimpan data pembeli tiket, meliputi email dan nama pembeli.
+- **Ticket** — menyimpan detail tiket yang dibeli, meliputi kode tiket, jenis tiket, harga, dan status kuota.
+- **Merchandise** — menyimpan data atribut/produk yang dijual, meliputi nama merchandise dan harga.
+
+**Entitas asosiatif (relasi many-to-many):**
+- **Lineup** — menghubungkan Artist dengan Stage_Schedule, karena satu artis bisa tampil di banyak jadwal panggung berbeda, dan satu jadwal panggung bisa diisi oleh lebih dari satu artis (misalnya kolaborasi). Entitas ini menyimpan atribut urutan tampil.
+- **PreOrder** — menghubungkan Ticket dengan Merchandise, karena satu tiket bisa dipakai untuk memesan berbagai jenis merchandise, dan satu jenis merchandise bisa dipesan lewat banyak tiket berbeda. Entitas ini menyimpan atribut jumlah pesanan.
+
+**Relasi dan kardinalitas:**
+- Event 1 — N Stage_Schedule (satu event dapat memiliki banyak jadwal panggung)
+- Venue 1 — N Stage_Schedule (satu venue dapat menyediakan banyak jadwal panggung, lintas event)
+- Stage_Schedule 1 — N Lineup, Artist 1 — N Lineup (relasi M:N antara Artist dan Stage_Schedule diuraikan melalui Lineup)
+- Stage_Schedule 1 — N Ticket (tiket terikat pada jadwal panggung tertentu, bukan langsung ke event, agar validasi kuota kapasitas dapat dihitung per kombinasi venue dan event sesuai aturan bisnis Dynamic Ticket Quota)
+- Customer 1 — N Ticket (satu customer dapat membeli banyak tiket)
+- Ticket 1 — N PreOrder, Merchandise 1 — N PreOrder (relasi M:N antara Ticket dan Merchandise diuraikan melalui PreOrder)
+
+Keputusan desain penting yang diambil kelompok adalah menghubungkan **Ticket ke Stage_Schedule**, bukan langsung ke Event. Hal ini didasari oleh aturan bisnis bahwa kapasitas kuota dihitung berdasarkan kombinasi Venue dan Event tertentu, bukan Event secara keseluruhan — sehingga satu event yang berlangsung di beberapa panggung/venue dapat memiliki kuota tiket yang divalidasi secara terpisah per panggung.
 
 ## 5. Keluaran atau ringkasan status migration.
 

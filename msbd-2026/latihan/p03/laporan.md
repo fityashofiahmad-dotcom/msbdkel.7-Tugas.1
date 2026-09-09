@@ -97,4 +97,4 @@ Yang tepat tetap berada di JSON: Atribut semi-terstruktur seperti array kontak (
 ![Sepuluh baris pertama](r1_10_baris.png/)
 
 ## Tautan Merge Request
-...
+https://github.com/fityashofiahmad-dotcom/msbdkel.7-Tugas.1/pull/3  andika chairul ilham

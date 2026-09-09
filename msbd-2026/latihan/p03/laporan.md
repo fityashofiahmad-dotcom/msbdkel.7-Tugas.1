@@ -58,7 +58,33 @@ Jika klausa ORDER BY ditambahkan ke dalam OVER() tanpa mendefinisikan batas fram
 - **Penjelasan Teknis:** Perbedaan ini timbul karena perbedaan perlakuan antara frame berbasis baris fisik (`ROWS`) dan frame berbasis rentang nilai (`RANGE`). Pada tabel `payment`, ada banyak transaksi yang terjadi pada hari yang sama. `RANGE` menggabungkan kelompok tanggal yang sama sebagai satu kesatuan nilai (peer), sedangkan `ROWS` memperlakukan setiap baris secara terpisah berdasarkan urutan eksekusinya. Hal ini menyebabkan hasil agregasi seperti rata-rata bergerak 7 hari (`rerata_7hari`) pada tanggal-tanggal tersebut menghasilkan angka yang berbeda.
 
 ## Refleksi D - Agregasi dan Operasi Himpunan
-...
+**Pada Q16, tanpa GROUPING(), bagaimana pembaca membedakan subtotal dari baris data yang
+kolomnya memang kosong?**
+ 
+Tanpa GROUPING(), nilai NULL yang dihasilkan ROLLUP untuk baris subtotal/grand-total tidak bisa
+dibedakan dari NULL yang memang ada secara alami pada data sumber — misalnya pada Pagila memang
+ada film dengan rating bernilai NULL (belum diberi rating MPAA). Kedua kasus itu sama-sama
+tampil sebagai NULL pada kolom rating, sehingga pembaca laporan tidak bisa tahu apakah baris itu
+"subtotal seluruh rating untuk satu kategori" atau "baris data asli untuk film-film yang memang
+tidak memiliki rating". GROUPING(kolom) menyelesaikan ini karena ia mengembalikan 1 khusus untuk
+baris super-agregat (di mana nilai kolom itu memang sengaja "diciutkan" oleh ROLLUP) dan 0 untuk
+baris nilai asli — termasuk ketika nilai asli itu sendiri kebetulan NULL — sehingga ambiguitasnya
+hilang sepenuhnya.
+ 
+**Pada Q17, mengapa versi FILTER dan CASE WHEN dapat memberi rata-rata berbeda walaupun jumlah
+baris sama?**
+ 
+Selama versi CASE WHEN ditulis tanpa klausa ELSE (`CASE WHEN kondisi THEN nilai END`), hasilnya
+identik dengan FILTER: baris yang tidak memenuhi syarat menghasilkan NULL, dan AVG secara bawaan
+mengabaikan NULL saat menghitung rata-rata — sama seperti FILTER yang mengecualikan baris
+tersebut dari agregat sama sekali. Perbedaan rata-rata baru muncul jika CASE WHEN ditulis DENGAN
+ELSE yang memetakan baris tak memenuhi syarat ke suatu nilai nyata, misalnya
+`avg(CASE WHEN f.length > 90 THEN f.length ELSE 0 END)`. Pada kasus itu, jumlah baris yang
+"dihitung" oleh AVG tetap sama, tetapi baris yang seharusnya dikecualikan justru ikut menyumbang
+nilai 0 ke dalam rata-rata, sehingga hasilnya turun dibanding versi FILTER. Jadi perbedaan
+sesungguhnya bukan dari pilihan FILTER vs CASE WHEN itu sendiri, melainkan dari ada-tidaknya
+ELSE pada versi CASE WHEN — sebuah jebakan yang mudah luput saat menulis agregat kondisional.
+ 
 
 ## Refleksi E - JSONB
 Dari atribut di dalam payload (nomor transaksi, status, jumlah, dan identitas pelanggan):

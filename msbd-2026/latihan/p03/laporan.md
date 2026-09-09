@@ -38,9 +38,6 @@ Yang sebaiknya dipromosikan menjadi kolom relasional (dengan constraint): Kolom 
 
 Yang tepat tetap berada di JSON: Atribut semi-terstruktur seperti array kontak (berisi daftar jenis dan nomor kontak yang jumlahnya bisa dinamis atau berbeda tiap transaksi). Alasan: Struktur bersarang (nested array) lebih fleksibel disimpan dalam format JSONB jika skemanya sering berkembang atau tidak seragam, sehingga menghindarkan kebutuhan pembuatan tabel relasional anak (relasi one-to-many) yang berlebihan untuk data pelengkap.
 
-## Temuan Q14
-...
-
 ## Hasil R1
 ![Sepuluh baris pertama](r1_10_bars/png)
 

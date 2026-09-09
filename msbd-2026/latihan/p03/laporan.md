@@ -31,7 +31,7 @@ Jika klausa ORDER BY ditambahkan ke dalam OVER() tanpa mendefinisikan batas fram
 ## Refleksi D - Agregasi dan Operasi Himpunan
 ...
 
-Refleksi E - JSONB
+## Refleksi E - JSONB
 Dari atribut di dalam payload (nomor transaksi, status, jumlah, dan identitas pelanggan):
 
 Yang sebaiknya dipromosikan menjadi kolom relasional (dengan constraint): Kolom seperti status (dengan CHECK constraint) dan jumlah (tipe data numerik), serta relasi pelanggan_id sebagai Foreign Key. Alasan: Atribut-atribut ini sering menjadi subjek utama operasi relasional berfrekuensi tinggi seperti pemfilteran (WHERE), pengurutan, agregasi matematis (SUM, AVG), serta membutuhkan integritas data yang ketat melalui constraints.

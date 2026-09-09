@@ -1,2 +1,1 @@
-ALTER TABLE peminjaman
-ADD COLUMN petugas varchar(120);
+ALTER TABLE venue ADD COLUMN petugas varchar(120);

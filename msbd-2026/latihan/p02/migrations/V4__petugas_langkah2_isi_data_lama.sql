@@ -1,3 +1,1 @@
-UPDATE peminjaman
-SET petugas = 'tidak tercatat'
-WHERE petugas IS NULL;
+UPDATE venue SET petugas = 'tidak tercatat' WHERE petugas IS NULL;

@@ -271,7 +271,13 @@ Penyebab Trigger Gagal pada Transaksi Konkuren vs Kemenangan EXCLUDE: Trigger pe
 Sebaliknya, constraint EXCLUDE ditegakkan langsung oleh mesin indeks GiST yang mengunci pasangan nilai secara atomik di tingkat penyimpanan (storage engine), sehingga menjamin validasi tumpang tindih tahan terhadap eksekusi konkuren.
 
 ### Refleksi E
-...
+Jarak rilis yang diusulkan antara migrasi 0045 dan 0046 adalah minimal satu siklus rilis penuh ditambah satu periode observasi produksi (contoh: 1–2 minggu), bukan dijalankan berurutan dalam deploy yang sama. Setelah 0045, pembaca lama sudah berfungsi normal lewat view fasad, sehingga tidak ada tekanan untuk buru-buru menjalankan 0046 — padahal 0046 adalah satu-satunya langkah yang tidak bisa sepenuhnya diurungkan (down hanya mengembalikan kolom rental_rate kosong, bukan nilai historisnya).
+
+Bukti yang harus dikumpulkan sebelum menjalankan 0046:
+1. Log akses/metrik aplikasi membuktikan tidak ada lagi jalur kode yang menulis langsung ke kolom rental_rate pada lab4.film_dasar.
+2. Perbandingan nilai rental_rate yang dibaca lewat view fasad dengan nilai lama sebelum 0045 menunjukkan nol selisih untuk seluruh film.
+3. Tidak ada laporan galat "relation/column does not exist" dari aplikasi selama periode observasi setelah 0045 aktif.
+4. Query pembanding eksplisit antara lab4.film_dasar.rental_rate dan lab4.harga_film dijalankan berulang kali (bukan sekali) menjelang jadwal 0046 dan konsisten menghasilkan nol selisih.
 
 ## Ringkasan Waktu
 | Tugas | Waktu | Penafsiran |

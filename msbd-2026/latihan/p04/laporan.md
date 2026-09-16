@@ -172,10 +172,32 @@ Waktu eksekusi trigger NONAKTIF: 8.150 ms.
 
 3. Alasan: Trigger per baris (FOR EACH ROW) menambah overhead signifikan karena mengeksekusi fungsi trigger secara kontekstual sebanyak 1.000 kali per baris.
 
-### Q13 ()
+### Q13 (q13_trigger_pernyataan.sql)
 1. Perintah:
-2. Keluaran:
-3. Alasan:
+CREATE OR REPLACE FUNCTION lab4.catat_audit_massal()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    INSERT INTO lab4.audit_harga (film_id, harga_lama, harga_baru)
+    SELECT b.film_id, l.rental_rate, b.rental_rate
+    FROM baru b
+    JOIN lama l ON l.film_id = b.film_id
+    WHERE l.rental_rate IS DISTINCT FROM b.rental_rate;
+    RETURN NULL;
+END;
+$$;
+
+CREATE TRIGGER film_audit_harga_massal
+AFTER UPDATE ON lab4.film
+REFERENCING OLD TABLE AS lama NEW TABLE AS baru
+FOR EACH STATEMENT
+EXECUTE FUNCTION lab4.catat_audit_massal();
+
+\timing on
+UPDATE lab4.film SET rental_rate = rental_rate + 0.01;
+
+2. Keluaran: Waktu eksekusi UPDATE massal: 11.450 ms.
+
+3. Alasan: Trigger level pernyataan memanfaatkan transition table (OLD TABLE/NEW TABLE) untuk memasukkan seluruh baris audit dalam 1 query INSERT INTO ... SELECT, jauh lebih efisien dibanding trigger per baris.
 
 ### Q14 ()
 1. Perintah:

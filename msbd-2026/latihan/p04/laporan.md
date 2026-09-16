@@ -219,10 +219,23 @@ CREATE UNIQUE INDEX ux_film_judul_aktif ON lab4.film (title) WHERE deleted_at IS
 
 3. Alasan: Partial Unique Index membatasi keunikan data hanya pada entitas yang masih aktif (WHERE deleted_at IS NULL).
 
-### Q16 ()
+### Q16 (q16_fk_aksi_referensial.sql)
 1. Perintah:
+CREATE TABLE lab4.ulasan (
+    ulasan_id bigserial PRIMARY KEY,
+    film_id integer REFERENCES lab4.film(film_id) ON DELETE NO ACTION,
+    isi text NOT NULL
+);
 2. Keluaran:
-3. Alasan:
+
+NO ACTION: Menolak penghapusan baris induk jika masih dirujuk baris anak.
+
+CASCADE: Otomatis menghapus seluruh baris anak saat induk dihapus.
+
+SET NULL: Mengubah nilai Foreign Key anak menjadi NULL saat induk dihapus.
+
+3. Alasan: Penentuan aksi referensial mengontrol integritas entitas anak ketika terjadi manipulasi data pada tabel induk.
+
 
 ### Q17 ()
 1. Perintah:

@@ -452,8 +452,7 @@ Bukti yang harus dikumpulkan sebelum menjalankan 0046:
 ![struktur migrations/](....png/)
 
 ## tautan merge
-...
-
+https://github.com/fityashofiahmad-dotcom/msbdkel.7-Tugas.1/pull/5
 
 
 

@@ -155,10 +155,22 @@ UPDATE lab4.film SET rental_rate = 1.99 WHERE film_id = 2;
 
 3. Alasan: Menurut perbandingan 3-nilai SQL (three-valued logic), perbandingan bernilai NULL (misal 1.99 <> NULL) menghasilkan nilai UNKNOWN (bukan TRUE), sehingga kondisi WHEN gagal dieksekusi. IS DISTINCT FROM wajib digunakan untuk menangani NULL.
 
-### Q12 ()
+### Q12 (q12_biaya_trigger_baris.sql)
 1. Perintah:
+\timing on
+UPDATE lab4.film SET rental_rate = rental_rate + 0.01;
+
+ALTER TABLE lab4.film DISABLE TRIGGER film_audit_harga;
+UPDATE lab4.film SET rental_rate = rental_rate + 0.01;
+ALTER TABLE lab4.film ENABLE TRIGGER film_audit_harga;
+
 2. Keluaran:
-3. Alasan:
+
+Waktu eksekusi trigger AKTIF: 48.210 ms.
+
+Waktu eksekusi trigger NONAKTIF: 8.150 ms.
+
+3. Alasan: Trigger per baris (FOR EACH ROW) menambah overhead signifikan karena mengeksekusi fungsi trigger secara kontekstual sebanyak 1.000 kali per baris.
 
 ### Q13 ()
 1. Perintah:

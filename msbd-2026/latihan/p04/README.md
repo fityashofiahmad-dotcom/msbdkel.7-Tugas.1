@@ -27,3 +27,25 @@ Beberapa pengujian memerlukan simulasi dua sesi paralel (concurrent sessions) di
 ## Peringatan Kritis Migrasi (0046)
 1. Migrasi 0046 (0046_contract_drop_kolom_lama.up.sql) bersifat DESTRUKTIF. Tindakan drop kolom lama pada tabel fisik tidak dapat diurungkan sepenuhnya melalui skrip down (.down.sql hanya mampu mengembalikan struktur kolom kosong, bukan nilai data historisnya).
 2. Jangan pernah menjalankan tahap 0046 sebelum seluruh bukti verifikasi backfill menghasilkan nilai nol (0) dan kestabilan view fasad teruji sempurna pada sesi pembaca.
+
+## Detail Implementasi Q18–Q21 (Expand–Contract)
+
+Berkas jawaban: `latihan/p04/q18_expand_tulis_ganda.sql`, `q19_backfill_bertahap.sql`, `q20_contract_view_fasad.sql`, `q21_migrasi_berversi.md`.
+
+1. **Q18 (Expand — Tulis Ganda):** Fungsi trigger `lab4.tulis_ganda_harga()` dipasang `AFTER INSERT OR UPDATE OF rental_rate ON lab4.film`. Pada `UPDATE` yang benar-benar mengubah harga (`IS DISTINCT FROM`), periode harga lama yang masih terbuka (`upper_inf(berlaku)`) ditutup ke tanggal hari ini lebih dulu, baru periode baru dibuka — urutan tutup-lalu-buka ini wajib agar tidak melanggar `EXCLUDE USING gist (film_id, wilayah, berlaku)` dari Q17.
+2. **Q19 (Migrate — Backfill Bertahap):** Backfill dijalankan lewat `PROCEDURE lab4.backfill_harga_film(1000)` yang dipanggil dengan `CALL`, bukan `DO` block, karena hanya prosedur yang bisa `COMMIT` di tengah loop. Setiap batch memproses 1000 `film_id` lalu `COMMIT`, sehingga kunci baris singkat dan progres tidak hilang bila proses terhenti di tengah jalan.
+3. **Q20 (Contract — View Fasad):** Dijalankan sebagai dua transaksi terpisah:
+   - **Langkah A** (atomik, satu `BEGIN...COMMIT`): `ALTER TABLE lab4.film RENAME TO film_dasar`, langsung diikuti `CREATE VIEW lab4.film` yang menyusun ulang kolom lama (`rental_rate` kini diambil dari `lab4.harga_film`). Kedua statement **harus** dalam satu transaksi — kalau dipisah, ada jendela nyata di mana nama `lab4.film` tidak menunjuk objek apa pun, dan sesi pembaca akan gagal dengan galat `relation "lab4.film" does not exist`.
+   - **Langkah B** (transaksi terpisah, dijalankan belakangan): `DROP TRIGGER` + `DROP FUNCTION` tulis ganda, lalu `ALTER TABLE lab4.film_dasar DROP COLUMN rental_rate`.
+4. **Q21 (Migrasi Berversi):** Enam tahap ditulis sebagai tiga pasang migrasi:
+
+   | Migrasi | Fase | Isi |
+   |---|---|---|
+   | `0041_expand_buat_harga_film` | Expand | Buat `lab4.harga_film` + `EXCLUDE` gist |
+   | `0042_expand_trigger_tulis_ganda` | Expand | Trigger tulis ganda |
+   | `0043_migrate_backfill` | Migrate | Backfill bertahap 1000 film/batch |
+   | `0044_migrate_verifikasi` | Migrate | `RAISE EXCEPTION` jika backfill belum nol |
+   | `0045_contract_view_fasad` | Contract | Rename + view fasad atomik |
+   | `0046_contract_drop_kolom_lama` | Contract | Drop trigger + drop kolom lama |
+
+   Jarak rilis yang diusulkan antara `0045` dan `0046`: minimal satu siklus rilis penuh, dengan empat bukti terkumpul lebih dulu — tidak ada penulisan langsung ke kolom lama, view fasad konsisten dengan sumber lama, tidak ada galat pembaca selama observasi, dan perbandingan eksplisit nol-selisih yang diulang beberapa kali. Rincian lengkap ada di `q21_migrasi_berversi.md`.

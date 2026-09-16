@@ -3,10 +3,10 @@
 ## Identitas Kelompok
 | Nama | NIM | Kontribusi | Commit |
 
-| Andika Chairul Ilham | 251402047 | L | Commit |
-| Fahri Arizal | 251402102 |  | Commit |
+| Andika Chairul Ilham | 251402047 | Langkah 6, Refleksi E, Laporan | Commit |
+| Fahri Arizal | 251402102 | Langkah 3, Refleksi B, Laporan | Commit |
 | Fitya Shofi Ahmad | 251402132 | Langkah 1, Langkah 2, Reflektif A, Laporan | Commit |
-| Mar'ie Rizqullah | 251402129 |  | Commit |
+| Mar'ie Rizqullah | 251402129 | Langkah 4, Langkah 5, Refleksi C, Refleksi D, Laporan | Commit |
 
 ## Q1_Q21
 ### Q1 (q01_view_film_murah.sql)

@@ -98,10 +98,35 @@ ORDER BY 1, 2;
 2. Keluaran:
 3. Alasan:
 
-### Q9 ()
+### Q9 (q09_trigger_audit_baris.sql)
 1. Perintah:
-2. Keluaran:
-3. Alasan:
+CREATE TABLE lab4.audit_harga (
+    audit_id bigserial PRIMARY KEY,
+    film_id integer NOT NULL,
+    harga_lama numeric(5,2),
+    harga_baru numeric(5,2),
+    diubah_oleh text NOT NULL DEFAULT current_user,
+    diubah_pada timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE OR REPLACE FUNCTION lab4.catat_perubahan_harga()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    INSERT INTO lab4.audit_harga (film_id, harga_lama, harga_baru)
+    VALUES (OLD.film_id, OLD.rental_rate, NEW.rental_rate);
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER film_audit_harga
+AFTER UPDATE OF rental_rate ON lab4.film
+FOR EACH ROW
+WHEN (OLD.rental_rate IS DISTINCT FROM NEW.rental_rate)
+EXECUTE FUNCTION lab4.catat_perubahan_harga();
+
+2. Keluaran: Tabel audit, fungsi trigger, dan trigger film_audit_harga berhasil dibuat.
+
+3. Alasan: Dipilih AFTER UPDATE OF rental_rate dengan WHEN (OLD.rental_rate IS DISTINCT FROM NEW.rental_rate) untuk mengeliminasi pencatatan log audit palsu.
 
 ### Q10 ()
 1. Perintah:

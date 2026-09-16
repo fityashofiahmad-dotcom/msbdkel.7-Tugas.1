@@ -174,7 +174,8 @@ Materialized View menukar kesegaran data (freshness) dengan kecepatan baca (read
 3. Risiko Mengirim Email Langsung dari Trigger: Trigger berjalan dalam transaksi basis data yang sama. Jika transaksi mengalami ROLLBACK akibat galat setelah trigger dieksekusi, email tetap terlanjur terkirim ke pengguna padahal data dibatalkan di basis data.
 
 ### Refleksi D
-...
+Penyebab Trigger Gagal pada Transaksi Konkuren vs Kemenangan EXCLUDE: Trigger pengecekan manual membaca data tabel sebelum INSERT. Pada tingkat isolasi transaksi standar (Read Committed), dua transaksi konkuren (A dan B) tidak dapat melihat baris uncommitted dari transaksi lain. Akibatnya, A dan B sama-sama menganggap rentang waktu masih kosong dan berhasil melakukan INSERT, menyebabkan periode tumpang tindih. 
+Sebaliknya, constraint EXCLUDE ditegakkan langsung oleh mesin indeks GiST yang mengunci pasangan nilai secara atomik di tingkat penyimpanan (storage engine), sehingga menjamin validasi tumpang tindih tahan terhadap eksekusi konkuren.
 
 ### Refleksi E
 ...

@@ -448,9 +448,6 @@ Bukti yang harus dikumpulkan sebelum menjalankan 0046:
 | Q12 | 48.210 ms | Trigger per baris (FOR EACH ROW) menambah overhead pemanggilan fungsi 1.000 kali. |
 | Q13 | 11.450 ms	| Trigger level pernyataan (FOR EACH STATEMENT) sangat cepat karena memakai transition table.|
 
-## Tangkapan Layar struktur migrations/
-![struktur migrations/](....png/)
-
 ## tautan merge
 https://github.com/fityashofiahmad-dotcom/msbdkel.7-Tugas.1/pull/5
 

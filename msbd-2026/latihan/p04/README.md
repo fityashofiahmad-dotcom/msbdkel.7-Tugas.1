@@ -41,6 +41,7 @@ Berkas jawaban: `latihan/p04/q18_expand_tulis_ganda.sql`, `q19_backfill_bertahap
 
    | Migrasi | Fase | Isi |
    |---|---|---|
+   
    | `0041_expand_buat_harga_film` | Expand | Buat `lab4.harga_film` + `EXCLUDE` gist |
    | `0042_expand_trigger_tulis_ganda` | Expand | Trigger tulis ganda |
    | `0043_migrate_backfill` | Migrate | Backfill bertahap 1000 film/batch |

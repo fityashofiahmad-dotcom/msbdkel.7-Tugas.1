@@ -169,7 +169,9 @@ Pendekatan ini bakal paling kerasa nyusahin waktu tim lagi bikin fitur input dat
 Materialized View menukar kesegaran data (freshness) dengan kecepatan baca (read performance). Data yang dibaca dari Materialized View bersifat stale (basi) sesuai waktu refresh terakhir, namun waktu kuerinya turun drastis dari orde detik menjadi milidetik karena hasilnya telah ditulis ke disk dalam bentuk tabel berindeks.  2. Kompromi Konkret untuk Laporan KeuanganBatas Kebasian (Staleness SLA): Menetapkan toleransi batas kebasian data laporan, misalnya 15–30 menit. Keuangan umumnya tidak membutuhkan agregasi transaksi bulanan/harian dalam skala detik secara real-time.Jadwal Refresh: Menjalankan REFRESH MATERIALIZED VIEW CONCURRENTLY menggunakan penjadwal otomatis (cron job / pg_cron) setiap 30 menit di luar jam sibuk atau pada interval waktu transaksi sepi.  Penanganan Saat Refresh Gagal:Mitigasi Pembaca: Menggunakan CONCURRENTLY memastikan bahwa apabila proses refresh gagal di tengah jalan, versi data lama tetap aman dibaca oleh aplikasi tanpa merusak atau menghapus data.  Alerting & Retry: Mengirim notifikasi otomatis (alerting) ke tim Data Ops/Engineering dan mengaktifkan prosedur retry otomatis dengan batas maksimal 3 kali percobaan.
 
 ### Refleksi C
-...
+1. Kapan Trigger Per Baris Tetap Lebih Tepat: Trigger per baris (FOR EACH ROW) tetap tepat digunakan ketika logika audit membutuhkan evaluasi variabel spesifik atau tindakan khusus per baris yang tidak dapat diselesaikan dengan ekspresi agregat massal tunggal.
+2. Kemampuan yang Tidak Dimiliki Trigger Pernyataan: Trigger per baris memiliki akses langsung ke variabel OLD dan NEW per baris secara real-time, serta mampu mengembalikan NULL pada BEFORE ROW trigger untuk membatalkan operasi secara selektif per baris.
+3. Risiko Mengirim Email Langsung dari Trigger: Trigger berjalan dalam transaksi basis data yang sama. Jika transaksi mengalami ROLLBACK akibat galat setelah trigger dieksekusi, email tetap terlanjur terkirim ke pengguna padahal data dibatalkan di basis data.
 
 ### Refleksi D
 ...

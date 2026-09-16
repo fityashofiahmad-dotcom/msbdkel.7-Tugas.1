@@ -208,10 +208,16 @@ ALTER TABLE lab4.film VALIDATE CONSTRAINT chk_rental_rate_positif;
 
 3. Alasan: Pemisahan dua tahap ini mencegah terjadinya table lock yang memblokir transaksi aplikasi pada tabel produksi berukuran besar.
 
-### Q15 ()
+### Q15 (q15_unique_soft_delete.sql)
 1. Perintah:
-2. Keluaran:
-3. Alasan:
+ALTER TABLE lab4.film ADD COLUMN deleted_at timestamptz;
+
+-- Ganti UNIQUE biasa dengan Unique Index Parsial:
+CREATE UNIQUE INDEX ux_film_judul_aktif ON lab4.film (title) WHERE deleted_at IS NULL;
+
+2. Keluaran: UNIQUE constraint biasa menolak judul duplikat meskipun baris lama berstatus terhapus (deleted_at IS NOT NULL). Unique index parsial membolehkan pendaftaran judul baru selama baris lama di-soft delete.
+
+3. Alasan: Partial Unique Index membatasi keunikan data hanya pada entitas yang masih aktif (WHERE deleted_at IS NULL).
 
 ### Q16 ()
 1. Perintah:

@@ -446,7 +446,7 @@ Bukti yang harus dikumpulkan sebelum menjalankan 0046:
 | Q6 | 135.810 ms	| Refresh biasa Materialized View memproses dan menulis hasil agregasi ke disk. |
 | Q7 | 215.420 ms	| Refresh CONCURRENTLY lebih lambat karena adanya komparasi diff data berindeks. |
 | Q12 | 48.210 ms | Trigger per baris (FOR EACH ROW) menambah overhead pemanggilan fungsi 1.000 kali. |
-| Q13 | | |
+| Q13 | 11.450 ms	| Trigger level pernyataan (FOR EACH STATEMENT) sangat cepat karena memakai transition table.|
 
 ## Tangkapan Layar struktur migrations/
 ![struktur migrations/](....png/)

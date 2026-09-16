@@ -237,10 +237,27 @@ SET NULL: Mengubah nilai Foreign Key anak menjadi NULL saat induk dihapus.
 3. Alasan: Penentuan aksi referensial mengontrol integritas entitas anak ketika terjadi manipulasi data pada tabel induk.
 
 
-### Q17 ()
+### Q17 (q17_exclude_harga.sql)
 1. Perintah:
-2. Keluaran:
-3. Alasan:
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+
+CREATE TABLE lab4.harga_film (
+    harga_film_id bigserial PRIMARY KEY,
+    film_id integer NOT NULL REFERENCES lab4.film (film_id),
+    wilayah text NOT NULL,
+    harga numeric(5,2) NOT NULL CHECK (harga >= 0),
+    berlaku daterange NOT NULL,
+    EXCLUDE USING gist (film_id WITH =, wilayah WITH =, berlaku WITH &&)
+);
+
+-- Uji 1 (Diterima):
+INSERT INTO lab4.harga_film VALUES (1, 1, 'ID', 2.99, daterange('2026-01-01', '2026-06-30'));
+-- Uji 2 (Ditolak):
+INSERT INTO lab4.harga_film VALUES (2, 1, 'ID', 3.99, daterange('2026-05-01', '2026-12-31'));
+
+2. Keluaran: Uji 1 berhasil. Uji 2 ditolak dengan galat: ERROR: conflicting key value violates exclusion constraint "harga_film_film_id_wilayah_berlaku_excl".
+
+3. Alasan: Constraint EXCLUDE dengan indeks GiST menolak rentang tanggal (daterange) yang tumpang tindih (&&) secara atomik dan tahan terhadap eksekusi transaksi konkuren.
 
 ### Q18 (q18_expand_tulis_ganda.sql)
 1. Perintah:

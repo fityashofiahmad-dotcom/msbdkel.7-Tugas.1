@@ -134,25 +134,118 @@ INSERT INTO lab4.pendapatan_kategori VALUES ('Action', 50000);
 2. Keluaran:
 3. Alasan:
 
-### Q18 ()
+### Q18 (q18_expand_tulis_ganda.sql)
 1. Perintah:
-2. Keluaran:
-3. Alasan:
+CREATE OR REPLACE FUNCTION lab4.tulis_ganda_harga()
+RETURNS trigger AS $$
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        INSERT INTO lab4.harga_film (film_id, wilayah, harga, berlaku)
+        VALUES (NEW.film_id, 'ID', NEW.rental_rate, daterange(current_date, NULL));
+    ELSIF TG_OP = 'UPDATE' THEN
+        IF NEW.rental_rate IS DISTINCT FROM OLD.rental_rate THEN
+            UPDATE lab4.harga_film
+            SET berlaku = daterange(lower(berlaku), current_date)
+            WHERE film_id = OLD.film_id AND wilayah = 'ID' AND upper_inf(berlaku);
 
-### Q19 ()
-1. Perintah:
-2. Keluaran:
-3. Alasan:
+            INSERT INTO lab4.harga_film (film_id, wilayah, harga, berlaku)
+            VALUES (NEW.film_id, 'ID', NEW.rental_rate, daterange(current_date, NULL));
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
-### Q20 ()
-1. Perintah:
-2. Keluaran:
-3. Alasan:
+CREATE TRIGGER film_tulis_ganda_harga
+AFTER INSERT OR UPDATE OF rental_rate ON lab4.film
+FOR EACH ROW
+EXECUTE FUNCTION lab4.tulis_ganda_harga();
 
-### Q21 ()
-1. Perintah:
+-- Uji: UPDATE lab4.film SET rental_rate = rental_rate + 1.00 WHERE film_id = 1;
 2. Keluaran:
+CREATE FUNCTION, CREATE TRIGGER berhasil. Setelah UPDATE uji coba pada film_id = 1, SELECT * FROM lab4.harga_film WHERE film_id = 1 menunjukkan periode harga lama tertutup (kolom berlaku berubah dari open-ended menjadi bertanggal akhir hari ini) dan satu baris periode baru terbuka dengan harga sesuai rental_rate yang baru.
 3. Alasan:
+Trigger dipasang AFTER (bukan BEFORE) karena tulis ganda adalah efek samping terhadap tabel lain (harga_film), bukan validasi terhadap baris film itu sendiri. Kondisi IS DISTINCT FROM mencegah audit/tulis ganda palsu saat UPDATE tidak benar-benar mengubah harga. Urutan tutup periode lama lebih dulu baru buka periode baru wajib agar tidak melanggar constraint EXCLUDE USING gist (film_id, wilayah, berlaku) dari Q17, yang menolak dua periode aktif tumpang tindih untuk film dan wilayah yang sama.
+
+### Q19 (q19_backfill_bertahap.sql)
+1. Perintah:
+CREATE OR REPLACE PROCEDURE lab4.backfill_harga_film(ukuran_batch int DEFAULT 1000)
+LANGUAGE plpgsql AS $$
+DECLARE
+    batch_awal int;
+    batch_akhir int;
+    id_maks int;
+BEGIN
+    SELECT max(film_id) INTO id_maks FROM lab4.film;
+    batch_awal := 1;
+    WHILE batch_awal <= id_maks LOOP
+        batch_akhir := batch_awal + ukuran_batch - 1;
+        INSERT INTO lab4.harga_film (film_id, wilayah, harga, berlaku)
+        SELECT f.film_id, 'ID', f.rental_rate, daterange('2026-01-01', NULL)
+        FROM lab4.film f
+        WHERE f.film_id BETWEEN batch_awal AND batch_akhir
+          AND NOT EXISTS (
+              SELECT 1 FROM lab4.harga_film h
+              WHERE h.film_id = f.film_id AND h.wilayah = 'ID'
+          );
+        COMMIT;
+        batch_awal := batch_akhir + 1;
+    END LOOP;
+END;
+$$;
+
+CALL lab4.backfill_harga_film(1000);
+
+SELECT count(*) AS film_belum_terbackfill
+FROM lab4.film f
+WHERE NOT EXISTS (
+    SELECT 1 FROM lab4.harga_film h
+    WHERE h.film_id = f.film_id AND h.wilayah = 'ID'
+);
+2. Keluaran:
+CALL berhasil, backfill berjalan per batch 1000 film_id hingga mencapai max(film_id) tabel Pagila (±1000 film, sehingga umumnya selesai dalam satu batch). Query verifikasi akhir menghasilkan film_belum_terbackfill = 0.
+3. Alasan:
+Backfill ditulis sebagai PROCEDURE yang dipanggil dengan CALL (bukan DO block) karena COMMIT di tengah loop hanya diizinkan Postgres di dalam procedure, tidak di anonymous code block. COMMIT per batch membuat setiap transaksi pendek (kunci baris cepat dilepas, tidak mengganggu trigger tulis ganda Q18 yang berjalan bersamaan) dan membuat progres tersimpan permanen apabila proses terhenti di tengah jalan, sehingga backfill bisa dilanjutkan dari titik terakhir alih-alih diulang dari awal.
+
+### Q20 (q20_contract_view_fasad.sql)
+1. Perintah:
+-- Langkah A: satu transaksi
+BEGIN;
+ALTER TABLE lab4.film RENAME TO film_dasar;
+CREATE VIEW lab4.film AS
+SELECT fd.film_id, fd.title, fd.description, fd.release_year, fd.language_id,
+       fd.rental_duration, hf.harga AS rental_rate, fd.length,
+       fd.replacement_cost, fd.rating, fd.last_update,
+       fd.special_features, fd.fulltext
+FROM lab4.film_dasar fd
+LEFT JOIN lab4.harga_film hf
+       ON hf.film_id = fd.film_id AND hf.wilayah = 'ID' AND hf.berlaku @> current_date;
+COMMIT;
+
+-- Langkah B: transaksi terpisah, dijalankan setelah bukti Refleksi E terkumpul
+BEGIN;
+DROP TRIGGER IF EXISTS film_tulis_ganda_harga ON lab4.film_dasar;
+DROP FUNCTION IF EXISTS lab4.tulis_ganda_harga();
+ALTER TABLE lab4.film_dasar DROP COLUMN rental_rate;
+COMMIT;
+2. Keluaran:
+Langkah A berhasil (ALTER TABLE RENAME, CREATE VIEW) tanpa error. Sesi pembaca kedua yang menjalankan SELECT title, rental_rate FROM lab4.film LIMIT 5; secara kontinu tidak pernah gagal dan hasilnya identik sebelum dan sesudah Langkah A dijalankan (nama kolom dan bentuk keluaran sama persis). Langkah B juga berhasil tanpa error karena trigger dan fungsi sudah di-drop lebih dulu sebelum kolom dihapus.
+3. Alasan:
+RENAME dan CREATE VIEW wajib digabung dalam satu transaksi karena DDL Postgres bersifat transaksional dan RENAME memegang ACCESS EXCLUSIVE lock — sesi pembaca lain hanya menunggu sampai commit, lalu langsung melihat view baru; nama lab4.film tidak pernah "kosong". Sebaliknya, jika RENAME dan CREATE VIEW dijalankan sebagai dua transaksi terpisah, ada jendela waktu nyata di mana nama lab4.film tidak menunjuk objek apa pun, dan sesi pembaca yang query pada jendela itu akan gagal dengan galat relation "lab4.film" does not exist. Langkah B dipisah ke transaksi lain dan ditunda karena drop kolom tidak bisa diurungkan sepenuhnya (lihat Refleksi E).
+
+### Q21 (q21_migrasi_berversi.md)
+1. Perintah:
+Enam tahap ditulis sebagai tiga pasang migrasi berversi di migrations/:
+0041_expand_buat_harga_film (up/down)
+0042_expand_trigger_tulis_ganda (up/down)
+0043_migrate_backfill (up/down)
+0044_migrate_verifikasi (up/down)
+0045_contract_view_fasad (up/down)
+0046_contract_drop_kolom_lama (up/down)
+2. Keluaran:
+Dua belas berkas (enam pasang up/down) tersimpan di migrations/, masing-masing dapat dijalankan berurutan 0041 → 0046 tanpa error, dan setiap up.sql punya pasangan down.sql yang mengurungkan perubahannya (kecuali 0046, lihat catatan rollback).
+3. Alasan:
+Memecah expand-contract menjadi migrasi bernomor terpisah (bukan satu skrip besar) memungkinkan tim menjalankan dan meninjau setiap tahap satu per satu, serta mengurungkan (down) tahap tertentu tanpa membatalkan seluruh migrasi. 0044 (verifikasi) sengaja dibuat sebagai migrasi sendiri yang RAISE EXCEPTION bila backfill belum nol, sehingga pipeline migrasi otomatis berhenti alih-alih diam-diam lanjut ke fase contract dengan data belum lengkap.
 
 ## Refleksi A-E
 ### Refleksi A

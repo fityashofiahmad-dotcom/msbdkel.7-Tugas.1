@@ -444,7 +444,7 @@ Bukti yang harus dikumpulkan sebelum menjalankan 0046:
 
 | Q5 | 142.350 ms | Query agregasi langsung membaca 500.000 baris data fisik. |
 | Q6 | 135.810 ms	| Refresh biasa Materialized View memproses dan menulis hasil agregasi ke disk. |
-| Q7 | | |
+| Q7 | 215.420 ms	| Refresh CONCURRENTLY lebih lambat karena adanya komparasi diff data berindeks. |
 | Q12 | | |
 | Q13 | | |
 

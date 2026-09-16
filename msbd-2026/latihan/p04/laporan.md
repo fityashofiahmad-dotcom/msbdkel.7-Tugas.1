@@ -128,10 +128,17 @@ EXECUTE FUNCTION lab4.catat_perubahan_harga();
 
 3. Alasan: Dipilih AFTER UPDATE OF rental_rate dengan WHEN (OLD.rental_rate IS DISTINCT FROM NEW.rental_rate) untuk mengeliminasi pencatatan log audit palsu.
 
-### Q10 ()
+### Q10 (q10_uji_audit_baris.sql)
 1. Perintah:
-2. Keluaran:
-3. Alasan:
+UPDATE lab4.film SET rental_rate = 2.99 WHERE film_id = 1;
+UPDATE lab4.film SET rental_rate = 2.99 WHERE film_id = 1;
+UPDATE lab4.film SET title = 'ACADEMY DINOSAUR UPDATED' WHERE film_id = 1;
+
+SELECT * FROM lab4.audit_harga WHERE film_id = 1;
+
+2. Keluaran: Hanya 1 baris record audit yang terbentuk (berasal dari UPDATE pertama).
+
+3. Alasan: UPDATE kedua ditolak oleh kondisi WHEN IS DISTINCT FROM (karena nilainya sama), sedangkan UPDATE ketiga ditolak oleh klausa OF rental_rate (karena yang diubah kolom title).
 
 ### Q11 ()
 1. Perintah:

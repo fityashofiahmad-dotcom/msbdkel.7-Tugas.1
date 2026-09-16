@@ -120,10 +120,18 @@ REFRESH MATERIALIZED VIEW CONCURRENTLY lab4.ringkasan_akses;
 3. Alasan: CONCURRENTLY membutuhkan UNIQUE INDEX agar PostgreSQL dapat melakukan komparasi diff data tanpa mengunci pembacaan. Waktu eksekusi lebih lambat dibanding refresh biasa karena adanya beban pemrosesan delta update.
 
 
-### Q8 ()
+### Q8 (q08_buktikan_pembaca.sql)
 1. Perintah:
-2. Keluaran:
-3. Alasan:
+-Sesi 1 (Penulis):
+INSERT INTO lab4.jejak_akses (film_id, waktu, kanal)
+SELECT (random() * 999)::int + 1, now(), 'web'
+FROM generate_series(1, 200000);
+
+REFRESH MATERIALIZED VIEW CONCURRENTLY lab4.ringkasan_akses;
+-Sesi 2 (Pembaca - Dijalankan bersamaan):
+SELECT count(*) FROM lab4.ringkasan_akses;
+2. Keluaran: Sesi 2 langsung mengembalikan hasil count tanpa tertahan (non-blocking). Saat diuji dengan REFRESH biasa, Sesi mengalami lock/hanging hingga Sesi 1 selesai.
+3. Alasan: CONCURRENTLY tidak mengambil AccessExclusiveLock, sehingga query SELECT dari klien lain tetap dapat membaca snapshot data lama secara konstan.
 
 ### Q9 (q09_trigger_audit_baris.sql)
 1. Perintah:

@@ -140,10 +140,20 @@ SELECT * FROM lab4.audit_harga WHERE film_id = 1;
 
 3. Alasan: UPDATE kedua ditolak oleh kondisi WHEN IS DISTINCT FROM (karena nilainya sama), sedangkan UPDATE ketiga ditolak oleh klausa OF rental_rate (karena yang diubah kolom title).
 
-### Q11 ()
+### Q11 (q11_null_pada_trigger.sql)
 1. Perintah:
-2. Keluaran:
-3. Alasan:
+CREATE OR REPLACE TRIGGER film_audit_harga
+AFTER UPDATE OF rental_rate ON lab4.film
+FOR EACH ROW
+WHEN (OLD.rental_rate <> NEW.rental_rate)
+EXECUTE FUNCTION lab4.catat_perubahan_harga();
+
+UPDATE lab4.film SET rental_rate = NULL WHERE film_id = 2;
+UPDATE lab4.film SET rental_rate = 1.99 WHERE film_id = 2;
+
+2. Keluaran: Perubahan nilai dari/ke NULL tidak tercatat di tabel audit_harga.
+
+3. Alasan: Menurut perbandingan 3-nilai SQL (three-valued logic), perbandingan bernilai NULL (misal 1.99 <> NULL) menghasilkan nilai UNKNOWN (bukan TRUE), sehingga kondisi WHEN gagal dieksekusi. IS DISTINCT FROM wajib digunakan untuk menangani NULL.
 
 ### Q12 ()
 1. Perintah:

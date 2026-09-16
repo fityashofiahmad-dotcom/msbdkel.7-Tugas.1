@@ -102,10 +102,23 @@ REFRESH MATERIALIZED VIEW lab4.ringkasan_akses;
 -Pembacaan awal: ERROR: materialized view "ringkasan_akses" has not been populated.
 -Waktu refresh biasa: 135.810 ms.
 3. Alasan: Klausa WITH NO DATA menunda komputasi awal. Materialized View menyimpan hasil di disk, tetapi wajib di-refresh terlebih dahulu agar dapat dibaca.
-### Q7 ()
+
+### Q7 (q07_refresh_concurrently.sql)
 1. Perintah:
+-- Percobaan awal tanpa index unik (gagal):
+REFRESH MATERIALIZED VIEW CONCURRENTLY lab4.ringkasan_akses;
+
+-- Pembuatan index unik:
+CREATE UNIQUE INDEX ux_ringkasan_akses ON lab4.ringkasan_akses (bulan, kanal);
+
+-- Refresh concurrently ulang:
+\timing on
+REFRESH MATERIALIZED VIEW CONCURRENTLY lab4.ringkasan_akses;
 2. Keluaran:
-3. Alasan:
+-Error awal: ERROR: cannot refresh materialized view "lab4.ringkasan_akses" concurrently.
+-Waktu refresh concurrently setelah index unik: 215.420 ms.
+3. Alasan: CONCURRENTLY membutuhkan UNIQUE INDEX agar PostgreSQL dapat melakukan komparasi diff data tanpa mengunci pembacaan. Waktu eksekusi lebih lambat dibanding refresh biasa karena adanya beban pemrosesan delta update.
+
 
 ### Q8 ()
 1. Perintah:

@@ -442,7 +442,7 @@ Bukti yang harus dikumpulkan sebelum menjalankan 0046:
 ## Ringkasan Waktu
 | Tugas | Waktu | Penafsiran |
 
-| Q5 | | |
+| Q5 | 142.350 ms | Query agregasi langsung membaca 500.000 baris data fisik. |
 | Q6 | | |
 | Q7 | | |
 | Q12 | | |

@@ -83,11 +83,25 @@ ORDER BY 1, 2;
 2. Keluaran: Hasil agregasi 500.000 baris data tercetak dengan catatan waktu eksekusi: 142.350 ms.
 3. Alasan: Query ini mengukur baseline kecepatan pemrosesan agregasi langsung pada tabel fisik besar sebelum dioptimasi menggunakan Materialized View.
 
-### Q6 ()
+### Q6 (q06_buat_matview.sql)
 1. Perintah:
-2. Keluaran:
-3. Alasan:
+CREATE MATERIALIZED VIEW lab4.ringkasan_akses AS
+SELECT date_trunc('month', a.waktu) AS bulan,
+       a.kanal,
+       count(*) AS jumlah_akses,
+       count(DISTINCT a.film_id) AS film_unik
+FROM lab4.jejak_akses a
+GROUP BY 1, 2
+ORDER BY 1, 2
+WITH NO DATA;
+SELECT * FROM lab4.ringkasan_akses;
 
+\timing on
+REFRESH MATERIALIZED VIEW lab4.ringkasan_akses;
+2. Keluaran:
+-Pembacaan awal: ERROR: materialized view "ringkasan_akses" has not been populated.
+-Waktu refresh biasa: 135.810 ms.
+3. Alasan: Klausa WITH NO DATA menunda komputasi awal. Materialized View menyimpan hasil di disk, tetapi wajib di-refresh terlebih dahulu agar dapat dibaca.
 ### Q7 ()
 1. Perintah:
 2. Keluaran:

@@ -199,10 +199,14 @@ UPDATE lab4.film SET rental_rate = rental_rate + 0.01;
 
 3. Alasan: Trigger level pernyataan memanfaatkan transition table (OLD TABLE/NEW TABLE) untuk memasukkan seluruh baris audit dalam 1 query INSERT INTO ... SELECT, jauh lebih efisien dibanding trigger per baris.
 
-### Q14 ()
+### Q14 (q14_check_not_valid.sql)
 1. Perintah:
-2. Keluaran:
-3. Alasan:
+ALTER TABLE lab4.film ADD CONSTRAINT chk_rental_rate_positif CHECK (rental_rate >= 0) NOT VALID;
+ALTER TABLE lab4.film VALIDATE CONSTRAINT chk_rental_rate_positif;
+
+2. Keluaran: Tahap 1 (NOT VALID) selesai seketika (0.003s). Tahap 2 (VALIDATE CONSTRAINT) memverifikasi data lama tanpa membutuhkan kunci penguncian eksklusif durasi panjang.
+
+3. Alasan: Pemisahan dua tahap ini mencegah terjadinya table lock yang memblokir transaksi aplikasi pada tabel produksi berukuran besar.
 
 ### Q15 ()
 1. Perintah:

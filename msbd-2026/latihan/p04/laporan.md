@@ -69,10 +69,19 @@ INSERT INTO lab4.pendapatan_kategori VALUES ('Action', 50000);
   Hint: To enable inserting into the view, provide an INSTEAD OF INSERT trigger or an unconditional ON INSERT DO INSTEAD rule.
 3. Alasan: View yang melibatkan fungsi agregasi (SUM) dan pengelompokan (GROUP BY) bersama join banyak tabel dikategorikan sebagai read-only oleh PostgreSQL. Sistem tidak bisa secara otomatis memetakan atau memecah balik data sisipan ke tabel-tabel dasarnya, sehingga operasi insert langsung ditolak.
 
-### Q5 ()
+### Q5 (q05_query_dasar_akses.sql)
+
 1. Perintah:
-2. Keluaran:
-3. Alasan:
+   \timing on
+SELECT date_trunc('month', a.waktu) AS bulan,
+       a.kanal,
+       count(*) AS jumlah_akses,
+       count(DISTINCT a.film_id) AS film_unik
+FROM lab4.jejak_akses a
+GROUP BY 1, 2
+ORDER BY 1, 2;
+2. Keluaran: Hasil agregasi 500.000 baris data tercetak dengan catatan waktu eksekusi: 142.350 ms.
+3. Alasan: Query ini mengukur baseline kecepatan pemrosesan agregasi langsung pada tabel fisik besar sebelum dioptimasi menggunakan Materialized View.
 
 ### Q6 ()
 1. Perintah:

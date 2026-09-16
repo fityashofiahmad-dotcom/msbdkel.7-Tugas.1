@@ -443,7 +443,7 @@ Bukti yang harus dikumpulkan sebelum menjalankan 0046:
 | Tugas | Waktu | Penafsiran |
 
 | Q5 | 142.350 ms | Query agregasi langsung membaca 500.000 baris data fisik. |
-| Q6 | | |
+| Q6 | 135.810 ms	| Refresh biasa Materialized View memproses dan menulis hasil agregasi ke disk. |
 | Q7 | | |
 | Q12 | | |
 | Q13 | | |

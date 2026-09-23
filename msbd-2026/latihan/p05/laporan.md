@@ -313,7 +313,9 @@ Persamaan: Keduanya (baik rollback dari basis data maupun Python) mengamankan in
 
 4. Refleksi D
 
-Bagian refleksi D belum memuat jawaban pada bahan laporan yang tersedia.
+Versi mana yang dipilih jika dibaca 6 bulan lagi?
+Jika digunakan untuk alur CRUD/Operasional Bisnis, versi ORM lebih dipilih karena relasi dan tipe datanya terlihat jelas sebagai objek Python, meskipun ada pengorbanan waktu eksekusi yang sedikit lebih lambat (ORM [masukkan angka detikmu di sini] vs SQL [masukkan angka detikmu di sini]). Namun, jika untuk membuat laporan analitik kompleks yang melibatkan ratusan ribu baris, versi SQL Mentah mutlak dipilih untuk menghemat memori.   Kapan joinedload lebih tepat dari selectinload?
+joinedload lebih tepat dipakai saat kita memuat relasi Many-to-One (misal: 1 Rental punya 1 Customer). Jika digunakan untuk One-to-Many dengan data anak yang sangat besar, joinedload berisiko memperbanyak baris duplikat di memori, sehingga selectinload (yang memakai 2 statement terpisah dengan IN) menjadi pilihan yang jauh lebih aman.
 
 5. Refleksi E
 

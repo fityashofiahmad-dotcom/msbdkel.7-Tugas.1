@@ -361,10 +361,23 @@ Kapan Layak Digunakan: Penangkapan galat ini layak digunakan ketika kita ingin m
 2. Keluaran:
 3. Alasan:
 
-### q01_total_dibayar.sql
-1. Perintah:
-2. Keluaran:
-3. Alasan:
+### Q16 Model Deklaratif
+1. **Perintah:** 
+Memetakan `Customer` dan `Rental` beserta relasinya menggunakan gaya deklaratif SQLAlchemy 2.0.
+2. **Keluaran:**
+```python
+class Customer(Base):
+    __tablename__ = "customer"
+    __table_args__ = {'schema': 'public'}
+    customer_id: Mapped[int] = mapped_column(primary_key=True)
+    rentals: Mapped[list["Rental"]] = relationship(back_populates="customer")
+
+class Rental(Base):
+    __tablename__ = "rental_tx"
+    __table_args__ = {'schema': 'lab5'}
+    rental_id: Mapped[int] = mapped_column(primary_key=True)
+    customer_id: Mapped[int] = mapped_column(ForeignKey("public.customer.customer_id"))
+    customer: Mapped["Customer"] = relationship(back_populates="rentals")
 
 ## Refleksi A–E
 1. Refleksi A
@@ -394,6 +407,15 @@ Persamaan: Keduanya (baik rollback dari basis data maupun Python) mengamankan in
 | Aturan | Lapisan | Risiko bila dipindahkan | Bukti |
 |---|---|---|---|
 
-## Ringkasan N+1
-| Q17 | Q18 | Q19 | Penafsiran |
-|---:|---:|---:|---|
+Q17 Bukti N+1
+Perintah:
+Mengambil 10 customer lalu mengakses atribut c.rentals untuk masing-masing baris.
+
+Keluaran:
+(Terdapat 11 query SELECT pada log terminal)
+Hasil Q17: [(1, 0), (2, 0), (3, 0), (4, 0), (5, 0), (6, 0), (7, 0), (8, 0), (9, 0), (10, 0)]
+
+Alasan:
+Pola akses bawaan (lazy loading) menembakkan 1 query untuk mengambil 10 induk (Customer), lalu karena ada iterasi len(c.rentals), ORM secara reaktif menembakkan 10 query tambahan untuk masing-masing anak.
+
+Ringkasan N+1StrategiJumlahPenafsiranQ17 (Lazy)11 StatementMenghasilkan 1 query untuk mengambil 10 induk, lalu ORM bereaksi otomatis menembakkan 10 query terpisah untuk mengambil anak pada setiap perulangan baris.Q18 (selectinload)2 StatementMenghasilkan 1 query untuk induk, lalu menembakkan 1 query susulan yang efisien untuk mengambil seluruh anak secara serentak memakai IN (...).   Q19 (joinedload)1 StatementMenghasilkan 1 query besar dan panjang yang menyelesaikan penggabungan induk dan anak di dalam mesin basis data lewat LEFT OUTER JOIN.   

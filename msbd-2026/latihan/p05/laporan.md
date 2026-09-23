@@ -1,4 +1,4 @@
-# Laporan Latihan Kelompok Pertemuan 5
+# LAPORAN LATIHAN KELOMPOK PERTEMUAN 5
 
 ## Anggota dan Kontribusi
 | Nama | NIM | Kontribusi | Commit |
@@ -17,10 +17,10 @@ $$;
 
 $ python -c 'import psycopg; conn = psycopg.connect("dbname=proyek_dev user=postgres host=localhost port=5434 password=postgres"); cur = conn.cursor(); cur.execute("SELECT lab5.total_dibayar(1::bigint);"); print("Total:", cur.fetchone()[0])'
 2. Keluaran: 
-Asus Tuf@ASUS-PITSOP MINGW64 /c/MSBD/msbd-2026 (main)
+`Asus Tuf@ASUS-PITSOP MINGW64` /c/MSBD/msbd-2026 (main)
 $ python -c 'import psycopg; conn = psycopg.connect("dbname=proyek_dev user=postgres host=localhost port=5434 password=postgres"); cur = conn.cursor(); cur.execute("SELECT lab5.total_dibayar(1::bigint);"); print("Total:", cur.fetchone()[0])'
 Total: 0
-(.venv) 
+`.venv` 
 3. Alasan: 
 Fungsi lab5.total_dibayar berhasil didefinisikan menggunakan bahasa SQL dengan sifat STABLE. Ketika dipanggil untuk rental_id = 1 yang belum memiliki riwayat pembayaran, fungsi menghitung agregasi pembayaran menggunakan sum(amount) yang digabung dengan coalesce(..., 0), sehingga mengembalikan nilai 0 alih-alih nilai kosong (NULL).
 
@@ -52,15 +52,15 @@ python -c 'import psycopg; conn = psycopg.connect("dbname=proyek_dev user=postgr
 
 python -c 'import psycopg; conn = psycopg.connect("dbname=proyek_dev user=postgres host=localhost port=5434 password=postgres"); cur = conn.cursor(); cur.execute("CALL lab5.process_rental(1, 1, 1, 9.99::numeric);"); conn.commit(); cur.execute("SELECT count(*) FROM lab5.rental_tx;"); r = cur.fetchone()[0]; cur.execute("SELECT count(*) FROM lab5.payment_tx;"); p = cur.fetchone()[0]; print(f"Sukses! Jumlah baris rental_tx: {r}, Jumlah baris payment_tx: {p}")'
 2. Keluaran:
-Asus Tuf@ASUS-PITSOP MINGW64 /c/MSBD/msbd-2026 (main)
+`Asus Tuf@ASUS-PITSOP MINGW64` /c/MSBD/msbd-2026 (main)
 $ python -c 'import psycopg; conn = psycopg.connect("dbname=proyek_dev user=postgres host=localhost port=5434 password=postgres"); cur = conn.cursor(); cur.execute("CREATE OR REPLACE PROCEDURE lab5.process_rental(p_customer_id integer, p_inventory_id integer, p_staff_id integer, p_amount numeric) LANGUAGE plpgsql AS '\''DECLARE v_rental_id bigint; BEGIN INSERT INTO lab5.rental_tx (customer_id, inventory_id, staff_id) VALUES (p_customer_id, p_inventory_id, p_staff_id) RETURNING rental_id INTO v_rental_id; INSERT INTO lab5.payment_tx (rental_id, amount) VALUES (v_rental_id, p_amount); END;'\''"); conn.commit(); print("Procedure berhasil dibuat!")'
 Procedure berhasil dibuat!
-(.venv) 
+`.venv` 
 
-Asus Tuf@ASUS-PITSOP MINGW64 /c/MSBD/msbd-2026 (main)
+`Asus Tuf@ASUS-PITSOP MINGW64` /c/MSBD/msbd-2026 (main)
 $ python -c 'import psycopg; conn = psycopg.connect("dbname=proyek_dev user=postgres host=localhost port=5434 password=postgres"); cur = conn.cursor(); cur.execute("CALL lab5.process_rental(1, 1, 1, 9.99::numeric);"); conn.commit(); cur.execute("SELECT count(*) FROM lab5.rental_tx;"); r = cur.fetchone()[0]; cur.execute("SELECT count(*) FROM lab5.payment_tx;"); p = cur.fetchone()[0]; print(f"Sukses! Jumlah baris rental_tx: {r}, Jumlah baris payment_tx: {p}")'
 Sukses! Jumlah baris rental_tx: 1, Jumlah baris payment_tx: 1
-(.venv) 
+`.venv` 
 3. Alasan:
 Prosedur lab5.process_rental berhasil dijalankan secara atomik (atomic transaction). Ketika dipanggil dengan nilai parameter yang sah, perintah INSERT pertama berhasil menyisipkan data penyewaan baru ke dalam tabel lab5.rental_tx dan mengembalikan (RETURNING) kunci ID baru (v_rental_id), yang kemudian langsung digunakan oleh perintah INSERT kedua untuk mencatat data pembayaran ke dalam tabel lab5.payment_tx.
 
@@ -91,7 +91,7 @@ value for domain lab5.positive_amount violates check constraint "positive_amount
 CONTEXT:  SQL statement "INSERT INTO lab5.payment_tx (rental_id, amount) VALUES (v_rental_id, p_amount)"
 PL/pgSQL function lab5.process_rental(integer,integer,integer,numeric) line 1 at SQL statement
 Jumlah baris rental_tx sesudahnya: 1
-(.venv) 
+`.venv` 
 3. Alasan:
 Prosedur dijalankan dalam satu blok transaksi yang bersifat atomik (atomic transaction). Ketika proses INSERT kedua ke tabel payment_tx gagal karena nilai -4.99 melanggar aturan domain positive_amount (yang mengharuskan nilai > 0), PostgreSQL secara otomatis melakukan rollback penuh pada seluruh transaksi yang sedang berjalan. Akibatnya, operasi INSERT pertama yang sebelumnya sempat sukses pada tabel rental_tx ikut dibatalkan oleh sistem, sehingga jumlah baris pada rental_tx tidak mengalami penambahan sama sekali.
 
@@ -154,12 +154,12 @@ except Exception as e:
     print(e)
 '
 2. Keluaran:
-Asus Tuf@ASUS-PITSOP MINGW64 /c/MSBD/msbd-2026 (main)
+`Asus Tuf@ASUS-PITSOP MINGW64` /c/MSBD/msbd-2026 (main)
 $ python -c 'import psycopg; conn = psycopg.connect("dbnampython -c 'import psycopg; conn = psycopg.connect("dbname=proyek_dev user=postgres host=localhost port=5434 password=postgres"); cur = conn.cursor(); cur.execute("CREATE OR REPLACE PROCEDURE lab5.process_rental_commit(p_customer_id integer, p_inventory_id integer, p_staff_id integer, p_amount numeric) LANGUAGE plpgsql AS '\''DECLARE v_rental_id bigint; BEGIN INSERT INTO lab5.rental_tx (customer_id, inventory_id, staff_id) VALUES (p_customer_id, p_inventory_id, p_staff_id) RETURNING rental_id INTO v_rental_id; COMMIT; INSERT INTO lab5.payment_tx (rental_id, amount) VALUES (v_rental_id, p_amount); END;'\''"); conn.commit(); print("Procedure dengan COMMIT berhasil dibuat!")'
 Procedure dengan COMMIT berhasil dibuat!
-(.venv) 
+`.venv` 
 
-Asus Tuf@ASUS-PITSOP MINGW64 /c/MSBD/msbd-2026 (main)
+`Asus Tuf@ASUS-PITSOP MINGW64` /c/MSBD/msbd-2026 (main)
 $ python -c 'import psycopg
 try:
     with psycopg.connect("dbname=proyek_dev user=postgres host=localhost port=5434 password=postgres") as conn:
@@ -172,7 +172,7 @@ except Exception as e:
 --- SALINAN GALAT ---
 invalid transaction termination
 CONTEXT:  PL/pgSQL function lab5.process_rental_commit(integer,integer,integer,numeric) line 1 at COMMIT
-(.venv) 
+`.venv` 
 3. Alasan:
 Driver Python (psycopg) beserta konteks blok with psycopg.connect(...) mengelola awal dan akhir transaksi secara otomatis dari sisi klien (koneksi luar). Ketika procedure mencoba mengeksekusi perintah pengendali transaksi secara mandiri di tengah-tengah blok (seperti perintah COMMIT di dalam fungsi/prosedur PL/pgSQL), PostgreSQL mendeteksi pelanggaran batas siklus transaksi aktif yang sedang dikendalikan, sehingga memicu galat terminasi transaksi yang tidak valid (invalid transaction termination).
 
@@ -233,7 +233,7 @@ except Exception as e:
     print(e)
 '
 2. Keluaran:
-Asus Tuf@ASUS-PITSOP MINGW64 /c/MSBD/msbd-2026 (main)
+`Asus Tuf@ASUS-PITSOP MINGW64` /c/MSBD/msbd-2026 (main)
 $ python -c 'import psycopg
 conn = psycopg.connect("dbname=proyek_dev user=postgres host=localhost port=5434 password=postgres")
 cur = conn.cursor()
@@ -246,9 +246,9 @@ cur.execute("""
     )
 'rint("Procedure safe berhasil dibuat!")''; tidak ditemu
 Procedure safe berhasil dibuat!
-(.venv) 
+`.venv` 
 
-Asus Tuf@ASUS-PITSOP MINGW64 /c/MSBD/msbd-2026 (main)
+`Asus Tuf@ASUS-PITSOP MINGW64` /c/MSBD/msbd-2026 (main)
 $ python -c 'import psycopg
 conn = psycopg.connect("dbname=proyek_dev user=postgres host=localhost port=5434 password=postgres")
 cur = conn.cursor()
@@ -263,7 +263,7 @@ except Exception as e:
 --- GALAT RAMAH TERTANGKAP ---
 Data relasi tidak ditemukan. Mohon periksa kembali input Anda.
 CONTEXT:  PL/pgSQL function lab5.process_rental_safe(integer,integer,integer,numeric) line 13 at RAISE
-(.venv) 
+`.venv` 
 3. Alasan:
 Blok EXCEPTION WHEN foreign_key_violation menangkap galat pelanggaran integritas relasi secara spesifik dan meneruskan pesan yang lebih ramah kepada pengguna melalui fungsi RAISE EXCEPTION.
 
@@ -276,92 +276,7 @@ Kapan Layak Digunakan: Penangkapan galat ini layak digunakan ketika kita ingin m
 2. Keluaran:
 3. Alasan:
 
-### q01_total_dibayar.sql
-1. Perintah:
-2. Keluaran:
-3. Alasan:
-
-### q01_total_dibayar.sql
-1. Perintah:
-2. Keluaran:
-3. Alasan:
-
-### q01_total_dibayar.sql
-1. Perintah:
-2. Keluaran:
-3. Alasan:
-
-### q01_total_dibayar.sql
-1. Perintah:
-2. Keluaran:
-3. Alasan:
-
-### q01_total_dibayar.sql
-1. Perintah:
-2. Keluaran:
-3. Alasan:
-
-### q01_total_dibayar.sql
-1. Perintah:
-2. Keluaran:
-3. Alasan:
-
-### q01_total_dibayar.sql
-1. Perintah:
-2. Keluaran:
-3. Alasan:
-
-### q01_total_dibayar.sql
-1. Perintah:
-2. Keluaran:
-3. Alasan:
-
-### q01_total_dibayar.sql
-1. Perintah:
-2. Keluaran:
-3. Alasan:
-
-### q01_total_dibayar.sql
-1. Perintah:
-2. Keluaran:
-3. Alasan:
-
-### q01_total_dibayar.sql
-1. Perintah:
-2. Keluaran:
-3. Alasan:
-
-### q01_total_dibayar.sql
-1. Perintah:
-2. Keluaran:
-3. Alasan:
-
-### q01_total_dibayar.sql
-1. Perintah:
-2. Keluaran:
-3. Alasan:
-
-### q01_total_dibayar.sql
-1. Perintah:
-2. Keluaran:
-3. Alasan:
-
-### q01_total_dibayar.sql
-1. Perintah:
-2. Keluaran:
-3. Alasan:
-
-### q01_total_dibayar.sql
-1. Perintah:
-2. Keluaran:
-3. Alasan:
-
-### q01_total_dibayar.sql
-1. Perintah:
-2. Keluaran:
-3. Alasan:
-
-### Q16 Model Deklaratif
+## Q16 Model Deklaratif
 1. **Perintah:** 
 Memetakan `Customer` dan `Rental` beserta relasinya menggunakan gaya deklaratif SQLAlchemy 2.0.
 2. **Keluaran:**
@@ -397,25 +312,39 @@ Keputusan: Tipe tags (Array) sebaiknya tetap dipertahankan di dalam tabel rental
 Persamaan: Keduanya (baik rollback dari basis data maupun Python) mengamankan integritas data secara atomik. Jika ada satu langkah yang gagal, maka seluruh statement perubahan data sebelumnya dalam transaksi tersebut akan ikut dibatalkan, sehingga tidak ada data "setengah jadi". Yang Hanya Bisa Dilakukan Aplikasi: Aplikasi dapat melakukan orkestrasi dengan memanggil layanan dari luar (dunia luar) sebelum memutuskan rollback. Misalnya: aplikasi bisa mencatat error ke monitoring log, membatalkan pengiriman email ke customer, atau memanggil API payment gateway eksternal untuk refund uang, di mana hal-hal ini tidak bisa/tidak boleh dilakukan dari dalam transaksi basis data.
 
 4. Refleksi D
-...
+
+Bagian refleksi D belum memuat jawaban pada bahan laporan yang tersedia.
 
 5. Refleksi E
-...
+
+Bagian refleksi E belum memuat jawaban pada bahan laporan yang tersedia.
 
 
 ## Di Mana Aturan Itu Tinggal
+
 | Aturan | Lapisan | Risiko bila dipindahkan | Bukti |
 |---|---|---|---|
+| *Belum diisi pada bahan laporan yang tersedia.* | — | — | — |
 
-Q17 Bukti N+1
-Perintah:
-Mengambil 10 customer lalu mengakses atribut c.rentals untuk masing-masing baris.
+## Q17 – Bukti N+1
+### Perintah
+Mengambil 10 customer, kemudian mengakses atribut `c.rentals` untuk masing-masing baris.
 
-Keluaran:
-(Terdapat 11 query SELECT pada log terminal)
+### Keluaran
+Terdapat 11 query `SELECT` pada log terminal.
 Hasil Q17: [(1, 0), (2, 0), (3, 0), (4, 0), (5, 0), (6, 0), (7, 0), (8, 0), (9, 0), (10, 0)]
 
-Alasan:
-Pola akses bawaan (lazy loading) menembakkan 1 query untuk mengambil 10 induk (Customer), lalu karena ada iterasi len(c.rentals), ORM secara reaktif menembakkan 10 query tambahan untuk masing-masing anak.
+### Alasan
+Pola akses bawaan (*lazy loading*) menembakkan 1 query untuk mengambil 10 induk (Customer), lalu karena ada iterasi len(c.rentals), ORM secara reaktif menembakkan 10 query tambahan untuk masing-masing anak.
 
-Ringkasan N+1StrategiJumlahPenafsiranQ17 (Lazy)11 StatementMenghasilkan 1 query untuk mengambil 10 induk, lalu ORM bereaksi otomatis menembakkan 10 query terpisah untuk mengambil anak pada setiap perulangan baris.Q18 (selectinload)2 StatementMenghasilkan 1 query untuk induk, lalu menembakkan 1 query susulan yang efisien untuk mengambil seluruh anak secara serentak memakai IN (...).   Q19 (joinedload)1 StatementMenghasilkan 1 query besar dan panjang yang menyelesaikan penggabungan induk dan anak di dalam mesin basis data lewat LEFT OUTER JOIN.   
+### Ringkasan N+1
+
+| Strategi | Jumlah Statement | Penafsiran |
+|---|---:|---|
+| Q17 (*Lazy*) | 11 | 1 query mengambil 10 data induk, lalu ORM mengeksekusi 10 query tambahan untuk mengambil data anak pada setiap perulangan. |
+| Q18 (*selectinload*) | 2 | 1 query mengambil data induk, kemudian 1 query susulan mengambil seluruh data anak secara serentak menggunakan `IN (...)`. |
+| Q19 (*joinedload*) | 1 | 1 query besar mengambil data induk dan anak sekaligus melalui `LEFT OUTER JOIN`. |
+
+## Kesimpulan
+
+Latihan Pertemuan 5 menunjukkan penerapan function, procedure, transaksi, rollback, exception handling, serta pemetaan relasi menggunakan SQLAlchemy. Hasil pengujian juga memperlihatkan pentingnya menjaga integritas transaksi dan memilih strategi pemuatan relasi ORM yang sesuai untuk menghindari masalah N+1 query.

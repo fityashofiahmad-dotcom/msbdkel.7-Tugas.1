@@ -378,10 +378,10 @@ Yang mengakhirinya tetap klien luar (Python) melalui perintah conn.commit() atau
 2. Bukti di Q4 (Error Invalid Transaction Termination): Kita membuktikannya dengan sengaja menyelipkan perintah COMMIT di tengah-tengah prosedur. Ketika prosedur itu dipanggil dari Python, PostgreSQL langsung memunculkan galat invalid transaction termination. Ini adalah bukti nyata bahwa prosedur tidak boleh (dilarang keras) mengatur akhir transaksi sendiri karena kendali siklus transaksi sudah dipegang penuh oleh koneksi luar dari Python.
 
 2. Refleksi B
-...
+Keputusan: Tipe tags (Array) sebaiknya tetap dipertahankan di dalam tabel rental_tx selama ia hanya dibaca utuh sebagai atribut pelengkap. Pertanyaan Bisnis (Alasan Pindah): "Tag mana yang paling sering digunakan pengguna bulan ini dan bagaimana korelasi tag tersebut dengan total pembayaran?". Jika bisnis mulai menanyakan hal ini, maka tag akan sering difilter di klausa WHERE, butuh di-join, dan butuh dihitung terpisah. Begitu hal ini terjadi, struktur array memakan biaya perawatan yang tinggi dan tags wajib dipisah menjadi tabel anak dengan relasi Foreign Key.
 
 3. Refleksi C
-...
+Persamaan: Keduanya (baik rollback dari basis data maupun Python) mengamankan integritas data secara atomik. Jika ada satu langkah yang gagal, maka seluruh statement perubahan data sebelumnya dalam transaksi tersebut akan ikut dibatalkan, sehingga tidak ada data "setengah jadi". Yang Hanya Bisa Dilakukan Aplikasi: Aplikasi dapat melakukan orkestrasi dengan memanggil layanan dari luar (dunia luar) sebelum memutuskan rollback. Misalnya: aplikasi bisa mencatat error ke monitoring log, membatalkan pengiriman email ke customer, atau memanggil API payment gateway eksternal untuk refund uang, di mana hal-hal ini tidak bisa/tidak boleh dilakukan dari dalam transaksi basis data.
 
 4. Refleksi D
 ...

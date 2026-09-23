@@ -2,7 +2,10 @@
 
 ## Anggota dan Kontribusi
 | Nama | NIM | Kontribusi | Commit |
-|---|---|---|---|
+| Andika Chairul Ilham | 251402047 | Langkah 6, Refleksi E, Laporan |---|
+| Fahri Arizal | 2514020102 | Langkah 5, Refleksi D, Laporan |---|
+| Fitya Shofi Ahmad | 251402132 | Langkah 1,Langkah 2, Refleksi A, Laporan |---|
+| Mar-ie Rizqullah | 251402129 | Langkah 3, Langkah 4, Refleksi B, Refleksi C, Laporan |---|
 
 ## Q1–Q24
 ### q01_total_dibayar.sql
@@ -364,7 +367,28 @@ Kapan Layak Digunakan: Penangkapan galat ini layak digunakan ketika kita ingin m
 3. Alasan:
 
 ## Refleksi A–E
+1. Refleksi A
+Setelah kita menguji Q3 dan Q4, berikut adalah analisis siapa yang memegang kendali transaksi beserta cara membuktikannya:
+* **Siapa yang memulai transaksi?**
+Yang memulai transaksi adalah klien luar (aplikasi Python/driver psycopg), bukan prosedur yang ada di dalam database. Setiap kali kita menjalankan perintah CALL atau mengeksekusi fungsi dari Python, driver secara otomatis membuka sebuah blok transaksi baru.
+* **Siapa yang mengakhirinya?**
+Yang mengakhirinya tetap klien luar (Python) melalui perintah conn.commit() atau conn.rollback().
+* **Bagaimana membuktikannya dari data?**
+1. Bukti di Q3 (Rollback otomatis): Kita membuktikannya dengan sengaja memasukkan data yang salah (nilai -4.99 yang melanggar aturan domain). Meskipun perintah INSERT pertama ke tabel rental_tx sempat sukses di dalam prosedur, ketika perintah kedua gagal, Python menangkap error tersebut dan melakukan conn.rollback(). Hasil pengecekan data di tabel rental_tx menunjukkan jumlah barisnya tetap 0 (tidak bertambah sama sekali). Ini membuktikan bahwa kendali rollback ada di tangan luar.
+2. Bukti di Q4 (Error Invalid Transaction Termination): Kita membuktikannya dengan sengaja menyelipkan perintah COMMIT di tengah-tengah prosedur. Ketika prosedur itu dipanggil dari Python, PostgreSQL langsung memunculkan galat invalid transaction termination. Ini adalah bukti nyata bahwa prosedur tidak boleh (dilarang keras) mengatur akhir transaksi sendiri karena kendali siklus transaksi sudah dipegang penuh oleh koneksi luar dari Python.
+
+2. Refleksi B
 ...
+
+3. Refleksi C
+...
+
+4. Refleksi D
+...
+
+5. Refleksi E
+...
+
 
 ## Di Mana Aturan Itu Tinggal
 | Aturan | Lapisan | Risiko bila dipindahkan | Bukti |

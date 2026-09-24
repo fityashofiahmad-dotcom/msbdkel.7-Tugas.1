@@ -30,3 +30,15 @@ source .venv/bin/activate
 pip install "psycopg[binary,pool]==3.2.*" "sqlalchemy==2.0.*" "fastapi==0.115.*" "uvicorn==0.32.*" "pydantic==2.*"
 4. Eksekusi skrip setup untuk membuat skema dan tabel lab5:
 psql "postgresql://postgres:postgres@localhost:5434/proyek_dev" -f latihan/p05/q00_setup.sql
+
+
+---
+
+## 6. Troubleshooting
+
+| Gejala | Penyebab Lazim | Tindakan |
+|---|---|---|
+| `connection refused port 5434` | Kontainer belum aktif atau port berbeda | Cek `docker compose ps`, sesuaikan port pada DSN |
+| `ModuleNotFoundError: psycopg` | Virtualenv belum aktif | Jalankan `source .venv/bin/activate`, cek `which python` |
+| Endpoint mengembalikan `500` alih-alih `422`/`409` | Exception belum ditangani spesifik di `lab5_api.py` | Cek urutan blok `except` (FK violation → 409, check violation → 422) |
+| `Pool timeout` saat menjalankan `lab5_api.py` | Koneksi sebelumnya tidak dikembalikan ke pool | Pastikan semua akses koneksi memakai `with pool.connection()` |

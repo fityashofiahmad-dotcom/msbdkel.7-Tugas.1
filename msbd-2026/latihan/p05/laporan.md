@@ -294,6 +294,68 @@ class Rental(Base):
     customer_id: Mapped[int] = mapped_column(ForeignKey("public.customer.customer_id"))
     customer: Mapped["Customer"] = relationship(back_populates="rentals")
 
+## Q21 · Dependency Koneksi
+
+1. **Perintah:**
+```python
+def get_conn():
+    with pool.connection() as conn:
+        yield conn
+```
+Dependency ini dipakai di endpoint lewat `Depends(get_conn)`.
+
+2. **Keluaran:**
+Tidak ada output langsung (dependency dipanggil otomatis oleh FastAPI per request), dibuktikan lewat keberhasilan Q22–Q24 di bawah — setiap request mendapat koneksi valid dari pool tanpa error `pool exhausted` atau koneksi bocor.
+
+3. **Alasan:**
+Pola `with pool.connection() as conn: yield conn` memastikan koneksi dipinjam dari `ConnectionPool` (bukan dibuat baru per request) dan **selalu** dikembalikan ke pool setelah handler FastAPI selesai — baik request berhasil maupun gagal — karena context manager `with` menangani pengembalian koneksi otomatis, sama seperti pola yang dipakai di Q13/Q14.
+
+## Q22 · POST /rentals (Berhasil)
+
+1. **Perintah:**
+```bash
+uvicorn lab5_api:app --reload
+```
+```bash
+curl -s -X POST localhost:8000/rentals -H 'content-type: application/json' \
+  -d '{"customer_id":1,"inventory_id":1,"staff_id":1,"amount":4.99}'
+```
+
+2. **Keluaran:**
+
+
+3. **Alasan:**
+Endpoint memanggil `CALL lab5.process_rental(%s, %s, %s, %s)` lewat koneksi dari `get_conn`, melakukan `commit()`, lalu mengembalikan `rental_id` baris terbaru dengan status `201 Created`. Ini membuktikan alur dari Q2 (procedure) berhasil dipicu lewat HTTP.
+
+## Q23 · Nilai Negatif → 422
+
+1. **Perintah:**
+```bash
+curl -s -i -X POST localhost:8000/rentals -H 'content-type: application/json' \
+  -d '{"customer_id":1,"inventory_id":1,"staff_id":1,"amount":-4.99}'
+```
+
+2. **Keluaran:**
+
+
+3. **Alasan:**
+Validasi `amount: Decimal = Field(gt=0)` pada model Pydantic `RentalIn` menolak nilai negatif **sebelum** permintaan menyentuh database, sehingga tidak ada query yang dijalankan dan tidak ada pesan galat SQL (seperti pada Q3/Q6) yang bocor ke klien. Respons tetap `422`, bukan `500`.
+
+## Q24 · Inventory Tidak Ada → 409
+
+1. **Perintah:**
+```bash
+curl -s -i -X POST localhost:8000/rentals -H 'content-type: application/json' \
+  -d '{"customer_id":1,"inventory_id":999999,"staff_id":1,"amount":4.99}'
+```
+
+2. **Keluaran:**
+
+
+3. **Alasan:**
+`inventory_id` yang tidak ada memicu `psycopg.errors.ForeignKeyViolation` dari constraint `REFERENCES public.inventory(inventory_id)` — galat basis data yang sama jenisnya dengan yang ditangani di Q5. Exception ini ditangkap secara spesifik di endpoint dan diterjemahkan menjadi `409 Conflict` dengan pesan generik, tanpa meneruskan detail SQL/skema ke klien.
+
+
 ## Refleksi A–E
 1. Refleksi A
 Setelah kita menguji Q3 dan Q4, berikut adalah analisis siapa yang memegang kendali transaksi beserta cara membuktikannya:
@@ -319,7 +381,13 @@ joinedload lebih tepat dipakai saat kita memuat relasi Many-to-One (misal: 1 Ren
 
 5. Refleksi E
 
-Bagian refleksi E belum memuat jawaban pada bahan laporan yang tersedia.
+Validasi `amount > 0` dipasang di dua lapisan: Pydantic (`Field(gt=0)` pada model `RentalIn`) dan domain basis data (`lab5.positive_amount`, dibuktikan di Q6).
+
+Jika validasi Pydantic dihapus: request dengan `amount` negatif akan diteruskan ke database dan memicu `CheckViolation` dari domain `positive_amount`. Jika exception ini tidak ditangani sespesifik `ForeignKeyViolation` di Q24, klien bisa menerima `500 Internal Server Error` alih-alih `422` yang informatif, dan berisiko pesan galat SQL mentah ikut terbawa ke respons HTTP — persis masalah yang coba dihindari di Q23.
+
+Jika domain `positive_amount` dihapus: endpoint FastAPI ini tetap aman karena Pydantic menolak nilai negatif lebih dulu. Namun domain di database adalah penjaga terakhir yang berlaku untuk *semua* jalur masuk data — bukan hanya lewat endpoint ini, tapi juga psql manual, script lain, atau endpoint baru di masa depan yang lupa memasang validasi setara. Tanpa domain, satu-satunya pencegahan hanya bergantung pada kode aplikasi yang bisa saja lupa dipasang ulang saat sistem berkembang.
+
+Kesimpulan: validasi di aplikasi (Pydantic) memberi respons cepat dan ramah bagi klien; validasi di database (domain) memberi jaminan integritas data yang tidak bergantung pada aplikasi mana pun yang menulis ke tabel tersebut. Kedua lapisan saling melengkapi, bukan saling menggantikan — ini juga sejalan dengan bukti Q3 dan Q6 bahwa database selalu jadi lini pertahanan terakhir meskipun aplikasi sudah memvalidasi lebih dulu.
 
 
 ## Di Mana Aturan Itu Tinggal

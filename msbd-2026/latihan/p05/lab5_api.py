@@ -21,7 +21,7 @@ from fastapi.exceptions import RequestValidationError
 from pydantic import BaseModel, Field
 
 DSN = os.environ.get(
-    "DSN", "postgresql://postgres:postgres@localhost:5432/postgres"
+    "DSN", "postgresql://postgres:postgres@localhost:5434/proyek_dev"
 )
 
 app = FastAPI(title="Lab5 Rental API")

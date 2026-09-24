@@ -30,9 +30,3 @@ source .venv/bin/activate
 pip install "psycopg[binary,pool]==3.2.*" "sqlalchemy==2.0.*" "fastapi==0.115.*" "uvicorn==0.32.*" "pydantic==2.*"
 4. Eksekusi skrip setup untuk membuat skema dan tabel lab5:
 psql "postgresql://postgres:postgres@localhost:5434/proyek_dev" -f latihan/p05/q00_setup.sql
-
-# Cara Menjalankan 3 Program Python
-....
-
-# 3 curl untuk Q22-Q24
-....

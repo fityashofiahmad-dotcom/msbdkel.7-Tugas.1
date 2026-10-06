@@ -140,8 +140,10 @@ b. Alasan satu skenario menghasilkan HOT update sedangkan yang lain tidak.
 21. Q21
 ...
 
-22. Q22
-...
+22. Q22.
+Pemilihan Plan Berdasarkan Status
+- **Status 'SUKSES':** Optimizer memilih **Sequential Scan**. Karena status 'SUKSES' mencakup ~84% total data, mengakses halaman tabel secara berurutan jauh lebih cepat daripada menggunakan indeks (mencegah *random I/O*).
+- **Status 'GAGAL':** Optimizer memilih **Bitmap Index Scan / Index Scan**. Status 'GAGAL' hanya mencakup ~2% dari total baris, sehingga pencarian lewat indeks jauh lebih efisien.
 
 23. Q23
 ...

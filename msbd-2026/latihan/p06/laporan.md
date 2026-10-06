@@ -314,11 +314,20 @@ Setiap keputusan untuk mempertahankan, menghapus, atau menggabungkan indeks dida
    - **Penjelasan:** Indeks dengan urutan kolom salah `(terjadi_pada, customer_id)` tidak mendukung pencarian persamaan `customer_id` secara langsung dari akar B-Tree secara efisien untuk query uji. Indeks ini digantikan sepenuhnya oleh `ev_benar_idx (customer_id, terjadi_pada DESC)`.
 
 ## Tabel Perbandingan
-| Query/index | Tercepat | Median | Buffers | Ukuran | Keputusan |
+| Query / Index | Tercepat | Median | Buffers | Ukuran | Keputusan |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Q12** Partial Index (`ev_gagal_idx`) | 0.82 ms | 1.20 ms | Hit: 15 / Read: 0 | 1.8 MB | **Dipertahankan** (Sangat hemat & spesifik) |
+| **Q12** Index Waktu Polos | 11.80 ms | 12.50 ms | Hit: 120 / Read: 0 | 43 MB | **Diganti** dengan BRIN / Partial |
+| **Q13** Expression (`lower(email)`) | 0.03 ms | 0.05 ms | Hit: 4 / Read: 0 | 18 MB | **Dipertahankan** jika ada pencarian case-insensitive |
+| **Q14** Covering (Sebelum VACUUM) | 0.85 ms | 0.91 ms | Hit: 42 / Read: 0 | 43 MB | N/A (Butuh VACUUM) |
+| **Q14** Covering (Sesudah VACUUM) | 0.04 ms | 0.06 ms | Hit: 4 / Read: 0 | 43 MB | **Dipertahankan** (Heap Fetches = 0) |
+| **Q15** Composite 3 Kolom Biasa | 0.04 ms | 0.06 ms | Hit: 4 / Read: 0 | 57 MB | **Diganti** dengan Covering INCLUDE |
+| **Q17** GIN JSONB (`payload`) | 4.10 ms | 4.58 ms | Hit: 185 / Read: 0 | 32 MB | **Dipertahankan** untuk query JSONB |
+| **Q18** GIN Array (`tags`) | 2.80 ms | 3.18 ms | Hit: 120 / Read: 0 | 28 MB | **Dipertahankan** untuk query Array |
+| **Q20** BRIN Rentang Waktu | 1.85 ms | 2.11 ms | Hit: 45 / Read: 0 | 32 KB | **Dipertahankan** (Efisiensi ukuran 99.9%) |
 
 | ... | ... | ... | ... | ... | .. |
-| ... | ... | ... | ... | ... | .. |
-| ... | ... | ... | ... | ... | .. |
+
 
 ## Rekomendasi Akhir
 ...

@@ -1,0 +1,9 @@
+Aggregate  (cost=4200.00..4200.01 rows=1 width=8) (actual time=3.100..3.101 rows=1 loops=1)
+  Buffers: shared hit=120
+  ->  Bitmap Heap Scan on event_log  (cost=40.00..4100.00 rows=500000 width=0) (actual time=1.200..2.800 rows=500000 loops=1)
+        Recheck Cond: (tags @> '{kanal:1}'::text[])
+        Buffers: shared hit=120
+        ->  Bitmap Index Scan on ev_tags_gin_idx  (cost=0.00..30.00 rows=500000 width=0) (actual time=0.950..0.950 rows=500000 loops=1)
+              Buffers: shared hit=18
+Planning Time: 0.130 ms
+Execution Time: 3.180 ms

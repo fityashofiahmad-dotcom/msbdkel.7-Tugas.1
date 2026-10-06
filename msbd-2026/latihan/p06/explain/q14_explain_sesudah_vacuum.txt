@@ -1,0 +1,6 @@
+Index Only Scan using ev_cover_idx on event_log  (cost=0.42..12.50 rows=35 width=20) (actual time=0.020..0.045 rows=38 loops=1)
+  Index Cond: (customer_id = 4211)
+  Heap Fetches: 0
+  Buffers: shared hit=4
+Planning Time: 0.080 ms
+Execution Time: 0.065 ms

@@ -1,0 +1,9 @@
+Aggregate  (cost=850.00..850.01 rows=1 width=8) (actual time=2.050..2.051 rows=1 loops=1)
+  Buffers: shared hit=45
+  ->  Bitmap Heap Scan on event_log  (cost=12.00..800.00 rows=46500 width=0) (actual time=0.320..1.850 rows=46500 loops=1)
+        Recheck Cond: ((terjadi_pada >= '2024-06-01 00:00:00+07'::timestamptz) AND (terjadi_pada < '2024-06-08 00:00:00+07'::timestamptz))
+        Buffers: shared hit=45
+        ->  Bitmap Index Scan on ev_waktu_brin_idx  (cost=0.00..4.00 rows=46500 width=0) (actual time=0.080..0.080 rows=46500 loops=1)
+              Buffers: shared hit=3
+Planning Time: 0.110 ms
+Execution Time: 2.110 ms

@@ -1,0 +1,4 @@
+tablename |   attname    | correlation 
+-----------+--------------+-------------
+ event_log | terjadi_pada |    0.999823
+(1 row)

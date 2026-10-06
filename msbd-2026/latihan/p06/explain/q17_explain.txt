@@ -1,0 +1,9 @@
+Aggregate  (cost=2150.00..2150.01 rows=1 width=8) (actual time=4.500..4.501 rows=1 loops=1)
+  Buffers: shared hit=185
+  ->  Bitmap Heap Scan on event_log  (cost=20.00..2100.00 rows=20000 width=0) (actual time=0.850..4.100 rows=20000 loops=1)
+        Recheck Cond: (payload @> '{"promo": true}'::jsonb)
+        Buffers: shared hit=185
+        ->  Bitmap Index Scan on ev_payload_gin_idx  (cost=0.00..15.00 rows=20000 width=0) (actual time=0.620..0.620 rows=20000 loops=1)
+              Buffers: shared hit=12
+Planning Time: 0.150 ms
+Execution Time: 4.580 ms

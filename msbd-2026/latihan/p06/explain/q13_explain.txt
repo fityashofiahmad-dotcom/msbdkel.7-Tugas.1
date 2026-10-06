@@ -1,0 +1,5 @@
+Index Scan using ev_email_lower_idx on event_log  (cost=0.42..8.44 rows=1 width=182) (actual time=0.035..0.037 rows=1 loops=1)
+  Index Cond: (lower(email) = 'user100@contoh.ac.id'::text)
+  Buffers: shared hit=4
+Planning Time: 0.110 ms
+Execution Time: 0.055 ms

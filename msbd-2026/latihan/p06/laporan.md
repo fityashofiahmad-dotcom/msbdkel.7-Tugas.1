@@ -185,7 +185,7 @@ Perbandingan Ukuran Total
 
 *Penambahan indeks memakan ruang disk 2,1x lipat lebih besar dibandingkan data tabel itu sendiri.*
 
-29. Q29
+29. Q29.
 Analisis Penggunaan Indeks (`idx_scan`)
 Berdasarkan pemantauan dari `pg_stat_user_indexes`:
 - `ev_cover_idx`: `idx_scan` tinggi → **Dipertahankan**
@@ -208,8 +208,26 @@ Berdasarkan analisis performa *read* (waktu & Buffers), *overhead write* (INSERT
 1. **Indeks Dihapus (`ev_status_idx`):** Kolom `status` memiliki distribusi tidak merata (84% `'SUKSES'`). Optimizer selalu memilih *Seq Scan* untuk status dominan ini, sehingga keberadaan indeks hanya membebani operasi penulisan data.
 2. **Indeks Dipertahankan (`ev_cover_idx` & `ev_gagal_idx`):** Menggabungkan kolom pencarian dan pengembalian (*INCLUDE*) mengurangi I/O *Heap*, sedangkan indeks parsial (*WHERE status = 'GAGAL'*) menjaga ukuran indeks tetap ringkas di RAM.
 
-31. q31
-...
+31. Q31.
+Reflektif: Dasar Keputusan Angka Pengukuran per Indeks
+
+Setiap keputusan untuk mempertahankan, menghapus, atau menggabungkan indeks didasarkan pada trade-off kuantitatif antara **ukuran ruang simpan**, **jumlah pencarian (`idx_scan`)**, dan **efisiensi *Buffers***:
+
+1. **`ev_status_idx` (Direkomendasikan DIHAPUS)**
+   - **Angka Dasar Keputusan:** `idx_scan = 0` (atau bernilai sangat rendah) & **Ukuran = 21 MB**.
+   - **Penjelasan:** Kolom `status` didominasi oleh nilai `'SUKSES'` (~84%). Optimizer PostgreSQL hampir tidak pernah memilih indeks ini karena *Sequential Scan* lebih murah untuk populasi sebesar itu. Menyimpan indeks sebesar 21 MB tanpa pernah dipakai hanya memberatkan operasi `INSERT`/`UPDATE` (menambah *overhead* waktu penulisan hingga **+425%** sesuai hasil Q27).
+
+2. **`ev_cover_idx` (Direkomendasikan DIPERTAHANKAN)**
+   - **Angka Dasar Keputusan:** Penurunan *Buffers* sebesar **98.2%** (dari ~14.200 *shared hit buffers* menjadi ~250 *buffers*).
+   - **Penjelasan:** Dengan menambahkan klausul `INCLUDE (terjadi_pada, jumlah)`, query dapat berjalan dalam mode *Index-Only Scan* tanpa perlu menyentuh *Heap* (tabel utama). Penghematan I/O yang sangat drastis ini melandasi keputusan untuk mempertahankan indeks ini meskipun ukurannya mencapai **28 MB**.
+
+3. **`ev_gagal_idx` (Partial Index) (Direkomendasikan DIPERTAHANKAN)**
+   - **Angka Dasar Keputusan:** Ukuran indeks hanya **1.2 MB** (menghemat **~94.2%** dibanding indeks *full-table* pada kolom `terjadi_pada` yang berukuran 21 MB).
+   - **Penjelasan:** Karena klausul `WHERE status = 'GAGAL'` hanya menyaring ~2% data dari total 2 juta baris, indeks parsial ini sangat efektif, kecil, cepat diperbarui saat *write*, dan sangat ramah RAM *cache*.
+
+4. **`ev_salah_idx` (Direkomendasikan DIGABUNG / DIHAPUS)**
+   - **Angka Dasar Keputusan:** Eksekusi query membutuhkan node **Sort** tambahan dengan konsumsi memori dan waktu eksekusi **~3.5x lebih lambat** dibanding `ev_benar_idx`.
+   - **Penjelasan:** Indeks dengan urutan kolom salah `(terjadi_pada, customer_id)` tidak mendukung pencarian persamaan `customer_id` secara langsung dari akar B-Tree secara efisien untuk query uji. Indeks ini digantikan sepenuhnya oleh `ev_benar_idx (customer_id, terjadi_pada DESC)`.
 
 ## Tabel Perbandingan
 | Query/index | Tercepat | Median | Buffers | Ukuran | Keputusan |

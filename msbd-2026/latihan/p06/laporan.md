@@ -193,7 +193,20 @@ Berdasarkan pemantauan dari `pg_stat_user_indexes`:
 - *Pengecualian:* Indeks dengan `idx_scan = 0` seperti `UNIQUE constraint` atau `Foreign Key index` tetap harus dipertahankan untuk menjamin integritas data dan mempercepat proses *DELETE/UPDATE cascading*.
   
 30. Q30
-...
+Rekomendasi Final Indeks
+
+Berdasarkan analisis performa *read* (waktu & Buffers), *overhead write* (INSERT/UPDATE), serta efisiensi ukuran memori, berikut adalah rekomendasi konsolidasi indeks untuk tabel `lab6.event_log`:
+
+| Status / Aksi | Nama Indeks | Definisi Indeks | Angka Pengukuran Kunci |
+| :--- | :--- | :--- | :--- |
+| **Dipertahankan** | `ev_cover_idx` | `(customer_id) INCLUDE (terjadi_pada, jumlah)` | Menurunkan Buffers **98.2%** via *Index-Only Scan* |
+| **Dipertahankan** | `ev_gagal_idx` | `(terjadi_pada DESC) WHERE status = 'GAGAL'` | Ukuran hemat **1.2 MB** (efisiensi ruang **94.2%**) |
+| **Dihapus** | `ev_status_idx` | `(status)` | `idx_scan = 0` (hampir tidak pernah dipilih optimizer) |
+| **Digabung/Diganti** | `ev_salah_idx` | `(terjadi_pada, customer_id)` | Menghilangkan *Node Sort* & **3.5x lebih cepat** saat urutan dibalik |
+
+#### Ringkasan Keputusan:
+1. **Indeks Dihapus (`ev_status_idx`):** Kolom `status` memiliki distribusi tidak merata (84% `'SUKSES'`). Optimizer selalu memilih *Seq Scan* untuk status dominan ini, sehingga keberadaan indeks hanya membebani operasi penulisan data.
+2. **Indeks Dipertahankan (`ev_cover_idx` & `ev_gagal_idx`):** Menggabungkan kolom pencarian dan pengembalian (*INCLUDE*) mengurangi I/O *Heap*, sedangkan indeks parsial (*WHERE status = 'GAGAL'*) menjaga ukuran indeks tetap ringkas di RAM.
 
 31. q31
 ...

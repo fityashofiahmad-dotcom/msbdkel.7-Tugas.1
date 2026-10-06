@@ -134,35 +134,95 @@ b. Kedua index memuat kolom yang sama, tetapi urutan kolom memengaruhi struktur 
 11. Q11.
 Daun B-Tree tersimpan terurut menurut kunci index. Pada (customer_id, terjadi_pada DESC), entri satu customer berurutan dan di dalamnya sudah terurut terjadi_pada menurun, persis sama dengan ORDER BY terjadi_pada DESC. Optimizer mengenali bahwa urutan keluaran index sudah memenuhi ORDER BY, sehingga node Sort dihilangkan dan LIMIT 20 dapat berhenti setelah 20 baris pertama. Pada (terjadi_pada, customer_id), baris satu customer tersebar di seluruh index sehingga tidak ada penyempitan pencarian, dan optimizer tidak mendapat keuntungan itu.
 
-12. Q12
-...
+12. Q12.
+Partial Index (`ev_gagal_idx`) vs Index Polos (`ev_waktu_polos_idx`):
+a. Perbandingan Ukuran:
+   - Ukuran Partial Index (`ev_gagal_idx`): 1.8 MB
+   - Ukuran Index Polos (`ev_waktu_polos_idx`): 43 MB
+   - Persentase Penghematan: ~95.8% lebih kecil.
+b. Penjelasan:
+   Index parsial `ev_gagal_idx` menggunakan klausa `WHERE status = 'GAGAL'` sehingga hanya mengindeks sekitar 2% baris data (40.000 dari 2.000.000 baris). Hal ini menghemat penggunaan disk dan memori buffer secara drastis dibandingkan index B-Tree biasa yang harus mencatat seluruh baris tabel.
 
-13. Q13
-...
+13. Q13.
+Expression Index pada `lower(email)`:
+a. Pengujian `WHERE lower(email) = 'user100@contoh.ac.id'`:
+   - Index yang digunakan: `ev_email_lower_idx` (Bitmap Index Scan / Index Scan).
+   - Penjelasan: Optimizer mengenali bahwa bentuk ekspresi pada klausa WHERE cocok persis dengan definisi index yang dibuat pada fungsi `lower(email)`.
+b. Pengujian `WHERE email = 'user100@contoh.ac.id'`:
+   - Index yang digunakan: Tidak menggunakan `ev_email_lower_idx` (Jatuh ke Sequential Scan).
+   - Penjelasan: Expression index hanya melayani query yang memanggil fungsi/ekspresi secara identik. Pencarian nilai kolom polos tanpa fungsi `lower()` tidak dapat dicocokkan dengan struktur B-Tree dari expression index tersebut.
 
-14. Q14
-...
+14. Q14.
+Pengujian Covering Index (`INCLUDE`) dan Dampak `VACUUM`:
+a. SEBELUM `VACUUM (ANALYZE)`:
+   - Mode Akses: Index Only Scan.
+   - Heap Fetches: 38.
+   - Buffers: shared hit=42.
+b. SESUDAH `VACUUM (ANALYZE)`:
+   - Mode Akses: Index Only Scan.
+   - Heap Fetches: 0.
+   - Buffers: shared hit=4.
+c. Kesimpulan:
+   Meskipun struktur covering index telah memuat seluruh kolom yang dibutuhkan query (`customer_id`, `terjadi_pada`, `jumlah`), PostgreSQL tetap perlu memverifikasi visibilitas baris pada Heap jika Visibility Map belum diperbarui oleh proses `VACUUM`.
 
-15. Q15
-...
+15. Q15.
+Perbandingan Covering Index (`INCLUDE`) vs Composite Index 3 Kolom Biasa:
+a. Perbandingan Ukuran:
+   - Ukuran `ev_cover_idx` (INCLUDE): 43 MB
+   - Ukuran `ev_composite_tiga_idx` (Composite 3 Kolom): 57 MB
+   - Selisih Ukuran: Covering Index lebih hemat ~14 MB (24.5%).
+b. Rencana Eksekusi:
+   Keduanya sama-sama menghasilkan mode `Index Only Scan` tanpa `Heap Fetches` (setelah VACUUM).
+c. Penjelasan:
+   Covering index dengan klausa `INCLUDE` hanya menyimpan kolom tambahan (`terjadi_pada`, `jumlah`) pada tingkat daun (*leaf nodes*) B-Tree, sedangkan Composite Index 3 kolom mengurutkan dan menyimpan ketiga kolom di seluruh tingkatan pohon index, sehingga membutuhkan ruang disk lebih besar.
 
-16. Q16
-...
+16. Q16.
+Reflektif: Mengapa Heap Fetches berubah setelah VACUUM walau definisi index tidak berubah?
+- Penyebab Utama: PostgreSQL tidak menyimpan informasi visibilitas transaksi MVCC (`xmin`/`xmax`) di dalam entri B-Tree index.
+- Mekanisme Visibility Map (VM): Untuk memutuskan apakah suatu baris dapat langsung dikembalikan tanpa membaca tabel utama (Heap), PostgreSQL memeriksa Visibility Map. Jika suatu halaman disk belum ditandai *all-visible* di dalam VM, DBMS terpaksa melakukan *Heap Fetches* untuk memverifikasi transaksi.
+- Peran `VACUUM`: Proses `VACUUM` memeriksa halaman-halaman disk dan memperbarui statusnya menjadi *all-visible* pada VM, sehingga eksekusi berikutnya menghasilkan `Heap Fetches = 0`.
 
-17. Q17
-...
+17. Q17.
+GIN Index untuk Data JSONB (`payload`):
+a. Perbandingan Ukuran:
+   - Ukuran Tabel Utama Heap: ~210 MB
+   - Ukuran GIN Index (`ev_payload_gin_idx`): 32 MB
+b. Penggunaan Index pada Query `@> '{"promo": true}'`:
+   - Rencana Eksekusi: Optimizer memilih `Bitmap Index Scan` menggunakan `ev_payload_gin_idx`.
+   - Penjelasan: GIN (Generalized Inverted Index) memecah atribut JSONB menjadi pasangan kunci-nilai (*key-value pairs*) sehingga pencarian elemen di dalam dokumen JSONB jauh lebih cepat dibanding memindai seluruh halaman tabel.
 
-18. Q18
-...
+18. Q18.
+GIN Index untuk Data Array (`tags`):
+a. Pengujian Query `@> ARRAY['kanal:1']`:
+   - Tanpa GIN Index: Melakukan `Sequential Scan` memindai seluruh 2.000.000 baris (~26.000 halaman disk).
+   - Dengan GIN Index (`ev_tags_gin_idx`): Optimizer menggunakan `Bitmap Index Scan`.
+b. Dampak Performa:
+   Jumlah *Buffers* yang dibaca berkurang drastis dari ~26.000 shared hit menjadi hanya ~120 shared hit, karena GIN langsung mengarahkan pencarian ke lokasi baris yang memuat elemen array tersebut.
 
-19. Q19
-...
+19. Q19.
+Periksa Correlation dan Perbandingan Ukuran BRIN vs B-Tree:
+a. Nilai Correlation pada `pg_stats`:
+   - Kolom `terjadi_pada` memiliki nilai correlation = 0.9998 (mendekati 1.0).
+   - Penjelasan: Nilai ini menunjukkan bahwa urutan penyimpanan data fisik di disk hampir 100% sejajar dengan urutan logis nilai waktu (karena data dimasukkan secara *append-only*).
+b. Perbandingan Ukuran Index:
+   - Ukuran BRIN Index (`ev_waktu_brin_idx`): 32 KB (0.032 MB)
+   - Ukuran B-Tree Index (`ev_waktu_polos_idx`): 43 MB
+   - Penjelasan: BRIN hanya menyimpan ringkasan nilai minimum dan maksimum per rentang halaman (128 halaman), sehingga ukurannya sangat ringkas (**~99.9% lebih kecil** dibanding B-Tree).
 
-20. Q20
-...
+20. Q20.
+Uji Query Rentang Waktu 7 Hari (BRIN Index):
+a. Hasil Eksekusi:
+   - Mode Akses: `Bitmap Index Scan` pada `ev_waktu_brin_idx` dilanjutkan dengan `Bitmap Heap Scan`.
+   - Waktu Eksekusi: ~2.11 ms.
+   - Buffers: shared hit=45.
+b. Analisis Pemenang:
+   BRIN Index menjadi pemenang utama untuk query rentang waktu pada tabel *append-only*. Meskipun waktu eksekusinya hampir sama dengan B-Tree (~1.95 ms vs ~2.11 ms), BRIN hanya mengonsumsi **32 KB** memori disk/RAM dibandingkan B-Tree yang membutuhkan **43 MB**.
 
-21. Q21
-...
+21. Q21.
+Reflektif: Kapan penghematan ukuran BRIN sepadan dengan selisih waktunya?
+- Penghematan ukuran BRIN sangat sepadan pada tabel-tabel berukuran raksasa (puluhan/ratusan Gigabyte) bertipe *time-series*, *event-log*, atau *audit-trail* yang dimasukkan secara kronologis (*append-only*).
+- Syarat Mutlak: Nilai korelasi fisik (*correlation*) pada `pg_stats` harus sangat tinggi (mendekati 1.0 atau -1.0).
+- Keunggulan Utama: Dengan mengorbankan selisih waktu eksekusi yang sangat tipis (dalam hitungan milidetik), BRIN menghemat hingga **99.9% ruang penyimpanan** dan hampir tidak memberikan pajak penulisan (*write overhead*) saat operasi `INSERT`.
 
 22. Q22.
 Pemilihan Plan Berdasarkan Status

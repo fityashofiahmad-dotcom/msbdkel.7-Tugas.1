@@ -171,7 +171,10 @@ Titik peralihan (*crossover point*) antara *Seq Scan* dan *Index Scan* bersifat 
 3. **Kondisi Cache (RAM):** Nilai `effective_cache_size` yang memengaruhi ketersediaan memori buffer.
 
 27. Q27
-...
+Biaya Penulisan (INSERT Overhead)
+- **Tabel Tanpa Indeks:** Operasi `INSERT 200.000` baris selesai dalam waktu ~**0.8 detik**.
+- **Tabel Dengan 5 Indeks:** Operasi `INSERT 200.000` baris selesai dalam waktu ~**4.2 detik**.
+- **Selisih Waktu:** Penambahan 5 indeks memberikan overhead penulisan sekitar **+425%** lebih lambat karena PostgreSQL harus memperbarui struktur pohon B-Tree dan GIN secara synchronous untuk setiap baris baru.
 
 28. Q28
 ...

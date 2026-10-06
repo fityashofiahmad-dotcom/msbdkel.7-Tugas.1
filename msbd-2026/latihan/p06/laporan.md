@@ -326,8 +326,4 @@ Setiap keputusan untuk mempertahankan, menghapus, atau menggabungkan indeks dida
 | **Q18** GIN Array (`tags`) | 2.80 ms | 3.18 ms | Hit: 120 / Read: 0 | 28 MB | **Dipertahankan** untuk query Array |
 | **Q20** BRIN Rentang Waktu | 1.85 ms | 2.11 ms | Hit: 45 / Read: 0 | 32 KB | **Dipertahankan** (Efisiensi ukuran 99.9%) |
 
-| ... | ... | ... | ... | ... | .. |
 
-
-## Rekomendasi Akhir
-...

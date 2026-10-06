@@ -186,8 +186,11 @@ Perbandingan Ukuran Total
 *Penambahan indeks memakan ruang disk 2,1x lipat lebih besar dibandingkan data tabel itu sendiri.*
 
 29. Q29
-...
-
+Analisis Penggunaan Indeks (`idx_scan`)
+Berdasarkan pemantauan dari `pg_stat_user_indexes`:
+- `ev_cover_idx`: `idx_scan` tinggi → **Dipertahankan**
+- `ev_status_idx`: `idx_scan = 0` (atau sangat rendah) → **Direkomendasikan Hapus**
+- *Pengecualian:* Indeks dengan `idx_scan = 0` seperti `UNIQUE constraint` atau `Foreign Key index` tetap harus dipertahankan untuk menjamin integritas data dan mempercepat proses *DELETE/UPDATE cascading*.
 30. Q30
 ...
 

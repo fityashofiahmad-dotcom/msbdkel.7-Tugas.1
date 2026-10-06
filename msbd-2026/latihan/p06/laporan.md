@@ -153,8 +153,10 @@ Fraksi Status dan Titik Transisi
   - `GAGAL`: 2.0%
 - **Titik Transisi:** Optimizer berpindah dari *Index Scan* ke *Seq Scan* ketika estimasi baris yang dikembalikan melebihi kisaran **5%–10%** dari total populasi tabel.
 
-24. Q24
-...
+24. Q24.
+Pengaruh `random_page_cost`
+- Saat `random_page_cost` diturunkan dari `4.0` (default HDD) menjadi `1.1` (mendekati SSD), biaya I/O acak dianggap hampir sebanding dengan I/O sekuensial.
+- **Dampak:** Titik transisi bergeser. Optimizer lebih agresif memilih *Index Scan* bahkan untuk nilai selektivitas yang lebih tinggi (seperti status `TERTUNDA` dengan fraksi 14%).
 
 25. Q25
 ...

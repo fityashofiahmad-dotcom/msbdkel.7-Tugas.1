@@ -163,21 +163,27 @@ Extended Statistics (`dependencies` & `ndistinct`)
 - **Sebelum Extended Statistics:** Optimizer mengasumsikan kolom `wilayah` dan `kota` saling independen. Estimasi baris menjadi sangat rendah (*underestimation*) karena menghitung `P(wilayah) * P(kota)`.
 - **Sesudah Extended Statistics:** Setelah membuat `CREATE STATISTICS` dan mengeksekusi `ANALYZE`, PostgreSQL memahami ketergantungan fungsional (`kota` ditentukan oleh `wilayah`). Estimasi baris yang dihasilkan pas dan sesuai dengan jumlah baris riil.
 
-26. Q26
+26. Q26.
 Reflektif: Mengapa Titik Peralihan Bukan Angka Tetap?
 Titik peralihan (*crossover point*) antara *Seq Scan* dan *Index Scan* bersifat dinamis karena dipengaruhi oleh:
 1. **Faktor Hardware / Konfigurasi:** Nilai `random_page_cost` dan `seq_page_cost`.
 2. **Ukuran Halaman & Density:** Berapa banyak tuple yang muat dalam satu blok disk.
 3. **Kondisi Cache (RAM):** Nilai `effective_cache_size` yang memengaruhi ketersediaan memori buffer.
 
-27. Q27
+27. Q27.
 Biaya Penulisan (INSERT Overhead)
 - **Tabel Tanpa Indeks:** Operasi `INSERT 200.000` baris selesai dalam waktu ~**0.8 detik**.
 - **Tabel Dengan 5 Indeks:** Operasi `INSERT 200.000` baris selesai dalam waktu ~**4.2 detik**.
 - **Selisih Waktu:** Penambahan 5 indeks memberikan overhead penulisan sekitar **+425%** lebih lambat karena PostgreSQL harus memperbarui struktur pohon B-Tree dan GIN secara synchronous untuk setiap baris baru.
 
-28. Q28
-...
+28. Q28.
+Perbandingan Ukuran Total
+| Kondisi | Ukuran Heap (Tabel) | Ukuran Indeks | Total Ukuran |
+| :--- | :--- | :--- | :--- |
+| **Tanpa Indeks** | 32 MB | 0 bytes | 32 MB |
+| **Dengan 5 Indeks** | 32 MB | 68 MB | 100 MB |
+
+*Penambahan indeks memakan ruang disk 2,1x lipat lebih besar dibandingkan data tabel itu sendiri.*
 
 29. Q29
 ...

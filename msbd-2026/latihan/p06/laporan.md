@@ -96,19 +96,43 @@ b. Alasan satu skenario menghasilkan HOT update sedangkan yang lain tidak.
         jika kolom yang di-update adalah kolom terindeks, perubahan nilai tersebut memaksa PostgreSQL untuk membuat entri indeks baru atau memodifikasi pointer indeks. Hal ini melanggar syarat mutlak mekanisme HOT update. Akibatnya, PostgreSQL terpaksa melakukan pembaruan standar (non-HOT), yaitu menaruh tuple baru di halaman disk (bisa di halaman berbeda) dan meregistrasikan ulang posisinya pada indeks secara penuh.
 
 7. Q7.
-...
+Rencana eksekusi tanpa index (hanya primary key event_id), paralel dimatikan:
+a. Jenis node: Seq Scan pada lab6.event_log dengan Sort (top-N heapsort) di atasnya, lalu Limit.
+b. Baris estimasi vs nyata: ___ vs ___
+c. Buffers: shared hit=___ read=___
+d. Waktu: run 1 = ___ ms, run 2 = ___ ms, run 3 = ___ ms. Tercepat ___ ms, median ___ ms.
 
-8. Q8
-...
+Tanpa index pada customer_id maupun terjadi_pada, PostgreSQL harus membaca seluruh tabel (2.000.000 baris) hanya untuk menemukan sedikit baris milik customer 4211, lalu mengurutkannya. Keluaran lengkap ada di explain/q07_run1.txt sampai q07_run3.txt.
 
-9. Q9
-...
+8. Q8.
+Index ev_salah_idx (terjadi_pada, customer_id):
+a. Index dipakai: ___ (Ya/Tidak)
+b. Node Sort masih ada: ___ (Ya/Tidak)
+c. Buffers: ___; waktu tercepat ___ ms, median ___ ms.
 
-10. Q10
-...
+[PILIH SATU, hapus yang lain]
+Varian A (index dipakai, tanpa Sort):
+Optimizer memakai Index Scan Backward sehingga Sort hilang, tetapi kolom terdepan index adalah terjadi_pada. Kondisi customer_id=4211 tidak dapat mempersempit rentang scan dan hanya berfungsi sebagai filter, sehingga banyak entri index harus dilewati sampai 20 baris ditemukan.
+Varian B (index tidak dipakai, Sort masih ada):
+Optimizer tetap memilih Seq Scan dan Sort karena customer_id bukan kolom terdepan index. Index ini tidak dapat mempersempit pencarian berdasarkan customer_id, sehingga biayanya dinilai tidak lebih murah daripada Seq Scan.
 
-11. q11
-...
+9. Q9.
+Index ev_benar_idx (customer_id, terjadi_pada DESC) dibuat, lalu ev_salah_idx dihapus.
+
+| Skenario | Tercepat (ms) | Median (ms) | Buffers | Node utama |
+| :--- | :--- | :--- | :--- | :--- |
+| Tanpa index | ___ | ___ | ___ | Seq Scan + Sort |
+| ev_salah_idx | ___ | ___ | ___ | ___ |
+| ev_benar_idx | ___ | ___ | ___ | Index Scan, tanpa Sort |
+
+Dengan customer_id sebagai kolom terdepan, scan langsung menuju segmen daun milik customer 4211, dan di dalam segmen itu entri sudah berurutan terjadi_pada DESC. Hasilnya, Sort hilang dan hanya sedikit halaman yang dibaca. Dibanding baseline, waktu tercepat turun dari ___ ms menjadi ___ ms (sekitar ___x lebih cepat), dan Buffers turun dari ___ menjadi ___.
+
+10. Q10.
+a. Ukuran: ev_salah_idx = ___ (___ byte); ev_benar_idx = ___ (___ byte); selisih ___%.
+b. Kedua index memuat kolom yang sama, tetapi urutan kolom memengaruhi struktur B-Tree. Pertama, integer (4 byte) dan timestamptz (8 byte) memiliki aturan alignment, sehingga urutan kolom dapat mengubah padding pada tuple index. Kedua, efektivitas suffix truncation di halaman internal bergantung pada kolom terdepan. Ketiga, pola pengisian halaman saat build berbeda karena urutan data yang dimasukkan berbeda. Karena itu ukuran dapat berbeda walau kolomnya sama.
+
+11. Q11.
+Daun B-Tree tersimpan terurut menurut kunci index. Pada (customer_id, terjadi_pada DESC), entri satu customer berurutan dan di dalamnya sudah terurut terjadi_pada menurun, persis sama dengan ORDER BY terjadi_pada DESC. Optimizer mengenali bahwa urutan keluaran index sudah memenuhi ORDER BY, sehingga node Sort dihilangkan dan LIMIT 20 dapat berhenti setelah 20 baris pertama. Pada (terjadi_pada, customer_id), baris satu customer tersebar di seluruh index sehingga tidak ada penyempitan pencarian, dan optimizer tidak mendapat keuntungan itu.
 
 12. Q12
 ...

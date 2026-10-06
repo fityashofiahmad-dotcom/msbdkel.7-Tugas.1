@@ -164,7 +164,11 @@ Extended Statistics (`dependencies` & `ndistinct`)
 - **Sesudah Extended Statistics:** Setelah membuat `CREATE STATISTICS` dan mengeksekusi `ANALYZE`, PostgreSQL memahami ketergantungan fungsional (`kota` ditentukan oleh `wilayah`). Estimasi baris yang dihasilkan pas dan sesuai dengan jumlah baris riil.
 
 26. Q26
-...
+Reflektif: Mengapa Titik Peralihan Bukan Angka Tetap?
+Titik peralihan (*crossover point*) antara *Seq Scan* dan *Index Scan* bersifat dinamis karena dipengaruhi oleh:
+1. **Faktor Hardware / Konfigurasi:** Nilai `random_page_cost` dan `seq_page_cost`.
+2. **Ukuran Halaman & Density:** Berapa banyak tuple yang muat dalam satu blok disk.
+3. **Kondisi Cache (RAM):** Nilai `effective_cache_size` yang memengaruhi ketersediaan memori buffer.
 
 27. Q27
 ...

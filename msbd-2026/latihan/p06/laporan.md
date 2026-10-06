@@ -145,8 +145,13 @@ Pemilihan Plan Berdasarkan Status
 - **Status 'SUKSES':** Optimizer memilih **Sequential Scan**. Karena status 'SUKSES' mencakup ~84% total data, mengakses halaman tabel secara berurutan jauh lebih cepat daripada menggunakan indeks (mencegah *random I/O*).
 - **Status 'GAGAL':** Optimizer memilih **Bitmap Index Scan / Index Scan**. Status 'GAGAL' hanya mencakup ~2% dari total baris, sehingga pencarian lewat indeks jauh lebih efisien.
 
-23. Q23
-...
+23. Q23.
+Fraksi Status dan Titik Transisi
+- **Distribusinya:**
+  - `SUKSES`: 84.0%
+  - `TERTUNDA`: 14.0%
+  - `GAGAL`: 2.0%
+- **Titik Transisi:** Optimizer berpindah dari *Index Scan* ke *Seq Scan* ketika estimasi baris yang dikembalikan melebihi kisaran **5%–10%** dari total populasi tabel.
 
 24. Q24
 ...

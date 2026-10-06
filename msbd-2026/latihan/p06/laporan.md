@@ -158,8 +158,10 @@ Pengaruh `random_page_cost`
 - Saat `random_page_cost` diturunkan dari `4.0` (default HDD) menjadi `1.1` (mendekati SSD), biaya I/O acak dianggap hampir sebanding dengan I/O sekuensial.
 - **Dampak:** Titik transisi bergeser. Optimizer lebih agresif memilih *Index Scan* bahkan untuk nilai selektivitas yang lebih tinggi (seperti status `TERTUNDA` dengan fraksi 14%).
 
-25. Q25
-...
+25. Q25.
+Extended Statistics (`dependencies` & `ndistinct`)
+- **Sebelum Extended Statistics:** Optimizer mengasumsikan kolom `wilayah` dan `kota` saling independen. Estimasi baris menjadi sangat rendah (*underestimation*) karena menghitung `P(wilayah) * P(kota)`.
+- **Sesudah Extended Statistics:** Setelah membuat `CREATE STATISTICS` dan mengeksekusi `ANALYZE`, PostgreSQL memahami ketergantungan fungsional (`kota` ditentukan oleh `wilayah`). Estimasi baris yang dihasilkan pas dan sesuai dengan jumlah baris riil.
 
 26. Q26
 ...

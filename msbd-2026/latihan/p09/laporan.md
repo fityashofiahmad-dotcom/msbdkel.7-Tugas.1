@@ -681,24 +681,43 @@ Bukti:
 ![Q23: Pemeriksaan parameter timeout](bukti/q23-timeout-show.png)
 
 24. Q24
--- Sesi A
-....
--- Sesi B
-....
+-- Setup Tabel Antrean
+CREATE TABLE IF NOT EXISTS lab9.antrean_pekerjaan (
+    id INT PRIMARY KEY,
+    deskripsi TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'PENDING'
+);
+INSERT INTO lab9.antrean_pekerjaan VALUES
+(1, 'Kirim Email Welcome', 'PENDING'),
+(2, 'Generate Report PDF', 'PENDING'),
+(3, 'Sync Data Customer', 'PENDING')
+ON CONFLICT (id) DO NOTHING;
+
+-- Sesi A (Worker 1)
+BEGIN;
+SELECT * FROM lab9.antrean_pekerjaan WHERE status = 'PENDING' ORDER BY id LIMIT 1 FOR UPDATE;
+
+-- Sesi B (Worker 2)
+BEGIN;
+SELECT * FROM lab9.antrean_pekerjaan WHERE status = 'PENDING' ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED;
+
+-- Sesi A & B
+COMMIT;
 
 Hasil sebelum:
-....
+Tabel antrean_pekerjaan berisi 3 baris data dengan status 'PENDING'.
 
 Hasil sesudah:
-....
+Sesi A mengunci baris id = 1 ('Kirim Email Welcome'). Sesi B secara instan mengembalikan baris id = 2 ('Generate Report PDF') tanpa mengalami blocking.
 
-Status akhir: COMMIT/ROLLBACK (pilih salah satu)
-SQLSTATE (jika ada eror): ...
+Status akhir: COMMIT (Sesi A), COMMIT (Sesi B)
+SQLSTATE (jika ada eror): -
 Penjelasan penyebab:
-....
+Klausul SKIP LOCKED memerintahkan mesin database untuk mengabaikan baris-baris yang sedang dikunci oleh transaksi lain dan langsung mengambil baris berikutnya yang belum terkunci. Fitur ini sangat berguna untuk arsitektur worker antrean (task queue) paralel agar banyak worker dapat mengambil pekerjaan secara bersamaan tanpa saling terhalang (non-blocking).
 
-Bukti: (screenshot .bukti/...)
-
+Bukti:
+![Q24: Sesi A mengunci baris 1](bukti/q24-SesiA.png)
+![Q24: Sesi B menggunakan SKIP LOCKED](bukti/q24-SesiB.png)
 25. Q25
 -- Sesi A
 ....

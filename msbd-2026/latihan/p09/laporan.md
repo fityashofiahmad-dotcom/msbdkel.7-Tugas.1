@@ -746,23 +746,47 @@ Bukti:
 ![Q25: Sesi B FOR UPDATE NOWAIT error](bukti/q25-SesiB-error.png)
 
 26. Q26
+-- Setup Tabel Dokter Jaga
+CREATE TABLE IF NOT EXISTS lab9.dokter_jaga (
+    id INT PRIMARY KEY,
+    nama TEXT NOT NULL,
+    aktif BOOLEAN NOT NULL
+);
+INSERT INTO lab9.dokter_jaga VALUES (1, 'dr. Andi', TRUE), (2, 'dr. Budi', TRUE)
+ON CONFLICT (id) DO UPDATE SET aktif = TRUE;
+
 -- Sesi A
-....
+BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+SELECT COUNT(*) FROM lab9.dokter_jaga WHERE aktif = TRUE; -- Hasil: 2
+
 -- Sesi B
-....
+BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+SELECT COUNT(*) FROM lab9.dokter_jaga WHERE aktif = TRUE; -- Hasil: 2
+
+-- Sesi A
+UPDATE lab9.dokter_jaga SET aktif = FALSE WHERE id = 1;
+COMMIT;
+
+-- Sesi B
+UPDATE lab9.dokter_jaga SET aktif = FALSE WHERE id = 2;
+COMMIT;
+
+-- Sesi A
+SELECT * FROM lab9.dokter_jaga;
 
 Hasil sebelum:
-....
+Tabel dokter_jaga memiliki 2 dokter dengan status aktif = TRUE. Aturan bisnis: minimal 1 dokter harus aktif.
 
 Hasil sesudah:
-....
+Sesi A dan Sesi B sama-sama berhasil melakukan COMMIT. Hasil akhir tabel menunjukkan kedua dokter bernilai aktif = FALSE (0 dokter aktif).
 
-Status akhir: COMMIT/ROLLBACK (pilih salah satu)
-SQLSTATE (jika ada eror): ...
+Status akhir: COMMIT (Sesi A), COMMIT (Sesi B)
+SQLSTATE (jika ada eror): -
 Penjelasan penyebab:
-....
+Terjadi anomali Write Skew. Pada isolation level REPEATABLE READ, kedua transaksi membaca snapshot data yang sama (menunjukkan 2 dokter aktif). Karena Sesi A mengubah baris id = 1 dan Sesi B mengubah baris id = 2, tidak terjadi konflik row lock langsung. Kedua transaksi diizinkan COMMIT, sehingga aturan bisnis "minimal 1 dokter aktif" terlanggar.
 
-Bukti: (screenshot .bukti/...)
+Bukti:
+![Q26: Sesi A dan Sesi B Write Skew](bukti/q26-write-skew.png)
 
 27. Q27
 -- Sesi A

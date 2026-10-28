@@ -367,155 +367,256 @@ Bukti: (screenshot .bukti/...)
 
 14. Q14
 -- Sesi A
-....
+SELECT saldo, version_no FROM lab9.rekening_v WHERE rekening_id = 1;
+UPDATE lab9.rekening_v SET saldo = 900000, version_no = version_no + 1
+WHERE rekening_id = 1 AND version_no = 1;
 -- Sesi B
-....
+SELECT saldo, version_no FROM lab9.rekening_v WHERE rekening_id = 1;
+UPDATE lab9.rekening_v SET saldo = 950000, version_no = version_no + 1
+WHERE rekening_id = 1 AND version_no = 1;
 
 Hasil sebelum:
-....
+Sesi A dan Sesi B sama-sama membaca saldo 1000000.00 dengan version_no 1.
 
 Hasil sesudah:
-....
+Sesi                   | Kondisi UPDATE  | Hasil    | Saldo akhir | version_no
+-----------------------+-----------------+----------+-------------+-----------
+A (menulis lebih dulu) | version_no = 1  | UPDATE 1 | 900000.00   | 2
+B (versi basi)         | version_no = 1  | UPDATE 0 | 900000.00   | 2
 
-Status akhir: COMMIT/ROLLBACK (pilih salah satu)
-SQLSTATE (jika ada eror): ...
+Status akhir: auto-commit (tanpa BEGIN eksplisit)
+SQLSTATE (jika ada eror): - (tidak ada error, hanya 0 baris terpengaruh)
 Penjelasan penyebab:
-....
+Kedua sesi membaca versi 1. Sesi A menulis lebih dulu dan menaikkan version_no menjadi 2. UPDATE Sesi B memakai kondisi version_no = 1 sehingga tidak cocok dengan baris mana pun dan hasilnya UPDATE 0. Aplikasi mengetahui data sudah berubah dari jumlah baris yang terpengaruh (0), lalu membaca ulang (saldo 900000, versi 2), menghitung ulang, dan mencoba lagi dengan version_no = 2. Pembaruan Sesi A tidak tertimpa (lost update dicegah) tanpa menahan lock selama pengguna berpikir (optimistic locking).
 
-Bukti: (screenshot .bukti/...)
+Bukti:
+![Q14: Sesi A](bukti/q14-SesiA.png)
+![Q14: Sesi B](bukti/q14-SesiB.png)
 
 15. Q15
 -- Sesi A
-....
+BEGIN ISOLATION LEVEL REPEATABLE READ;
+SELECT saldo FROM lab9.rekening WHERE rekening_id = 1;
 -- Sesi B
-....
+BEGIN;
+UPDATE lab9.rekening SET saldo = saldo - 50000 WHERE rekening_id = 1;
+-- Sesi A (B belum COMMIT)
+SELECT saldo FROM lab9.rekening WHERE rekening_id = 1;
+-- Sesi B
+COMMIT;
+-- Sesi A
+SELECT saldo FROM lab9.rekening WHERE rekening_id = 1;
+COMMIT;
+SELECT saldo FROM lab9.rekening WHERE rekening_id = 1;
 
 Hasil sebelum:
-....
+SELECT #1 di Sesi A = 1000000.00
 
 Hasil sesudah:
-....
+Langkah                                              | Saldo yang dilihat Sesi A | Menunggu?
+-----------------------------------------------------+---------------------------+----------
+SELECT #1 (awal)                                     | 1000000.00                | Tidak
+SELECT #2 (B sudah UPDATE, belum COMMIT)             | 1000000.00                | Tidak
+SELECT #3 (B sudah COMMIT, A masih dalam transaksi)  | 1000000.00                | Tidak
+SELECT setelah A COMMIT                              | 950000.00                 | Tidak
 
-Status akhir: COMMIT/ROLLBACK (pilih salah satu)
-SQLSTATE (jika ada eror): ...
+Status akhir: Sesi A COMMIT, Sesi B COMMIT
+SQLSTATE (jika ada eror): -
 Penjelasan penyebab:
-....
+Pada MVCC, UPDATE tidak menimpa baris lama melainkan membuat versi baris baru. Pembaca memakai snapshot dan hanya melihat versi yang sudah di-COMMIT saat snapshot dibuat, sehingga SELECT biasa di Sesi A tidak menunggu transaksi Sesi B (pembaca tidak memblokir penulis, penulis tidak memblokir pembaca). Pada REPEATABLE READ, snapshot dibuat sekali pada pernyataan pertama transaksi, sehingga perubahan B tetap tidak terlihat sampai A selesai. Setelah itu data dipulihkan ke 1000000.00.
 
-Bukti: (screenshot .bukti/...)
+Bukti:
+![Q15: Sesi A](bukti/q15-SesiA.png)
+![Q15: Sesi B](bukti/q15-SesiB.png)
 
 16. Q16
 -- Sesi A
-....
+SELECT xmin, xmax, ctid, rekening_id, saldo FROM lab9.rekening WHERE rekening_id = 1;
+BEGIN;
+SELECT pg_current_xact_id();
+UPDATE lab9.rekening SET saldo = saldo - 1000 WHERE rekening_id = 1;
+SELECT xmin, xmax, ctid, rekening_id, saldo FROM lab9.rekening WHERE rekening_id = 1;
+-- Sesi B (A belum COMMIT)
+SELECT xmin, xmax, ctid, rekening_id, saldo FROM lab9.rekening WHERE rekening_id = 1;
+-- Sesi A
+ROLLBACK;
 -- Sesi B
-....
+SELECT xmin, xmax, ctid, rekening_id, saldo FROM lab9.rekening WHERE rekening_id = 1;
 
 Hasil sebelum:
-....
+xmin=<ISI>, xmax=0, ctid=(<ISI>), saldo=1000000.00
 
 Hasil sesudah:
-....
+Pengamatan                 | xmin     | xmax                       | ctid     | saldo
+---------------------------+----------+----------------------------+----------+-----------
+Awal                       | <ISI>    | 0                          | <ISI>    | 1000000.00
+Sesi A setelah UPDATE      | <X_A>    | 0                          | <ISI>    | 999000.00
+Sesi B saat A belum COMMIT | <ISI>    | <X_A>                      | <ISI>    | 1000000.00
+Sesi B setelah ROLLBACK    | <ISI>    | <ISI: kemungkinan masih X_A> | <ISI>  | 1000000.00
+Nomor transaksi A dari pg_current_xact_id() = <X_A>
 
-Status akhir: COMMIT/ROLLBACK (pilih salah satu)
-SQLSTATE (jika ada eror): ...
+Status akhir: ROLLBACK
+SQLSTATE (jika ada eror): -
 Penjelasan penyebab:
-....
+xmin adalah ID transaksi yang membuat versi baris, dan xmax adalah ID transaksi yang menghapus/meng-update/mengunci versi tersebut. Keduanya adalah metadata sistem PostgreSQL, bukan kolom bisnis. Sesi B masih melihat versi lama dengan xmax terisi nomor transaksi A, padahal baris itu masih valid bagi B karena A belum COMMIT. Setelah ROLLBACK, xmax bisa masih terisi tetapi diabaikan karena transaksi A dibatalkan. Jadi satu nilai xmin/xmax saja tidak cukup untuk menyimpulkan visibilitas, karena harus dilihat juga status COMMIT/ABORT transaksi terkait dan snapshot pembaca.
 
-Bukti: (screenshot .bukti/...)
+Bukti:
+![Q16: Sesi A](bukti/q16-SesiA.png)
+![Q16: Sesi B](bukti/q16-SesiB.png)
 
 17. Q17
 -- Sesi A
-....
--- Sesi B
-....
+SELECT relname, n_live_tup, n_dead_tup FROM pg_stat_user_tables
+WHERE schemaname = 'lab9' AND relname = 'rekening';
+UPDATE lab9.rekening SET saldo = saldo WHERE rekening_id = 1;   -- diulang 10 kali
+SELECT relname, n_live_tup, n_dead_tup FROM pg_stat_user_tables
+WHERE schemaname = 'lab9' AND relname = 'rekening';
+VACUUM (VERBOSE) lab9.rekening;
+SELECT relname, n_live_tup, n_dead_tup FROM pg_stat_user_tables
+WHERE schemaname = 'lab9' AND relname = 'rekening';
 
 Hasil sebelum:
-....
+n_live_tup=2, n_dead_tup=<ISI>
 
 Hasil sesudah:
-....
+Tahap                    | n_live_tup | n_dead_tup
+-------------------------+------------+-----------
+Sebelum UPDATE           | 2          | <ISI>
+Setelah 10 kali UPDATE   | 2          | <ISI>
+Setelah VACUUM           | 2          | 0
+Ringkasan VERBOSE: <ISI: salin baris "removed ... dead row versions" dari output>
 
-Status akhir: COMMIT/ROLLBACK (pilih salah satu)
-SQLSTATE (jika ada eror): ...
+Status akhir: auto-commit (VACUUM tidak boleh di dalam blok transaksi)
+SQLSTATE (jika ada eror): -
 Penjelasan penyebab:
-....
+Manfaat MVCC: pembaca dan penulis tidak saling memblokir, dan setiap transaksi mendapat snapshot yang konsisten. Harganya, setiap UPDATE/DELETE meninggalkan versi baris lama (dead tuple) yang masih diperlukan selama ada transaksi lama yang mungkin melihatnya. Setelah tidak ada transaksi yang membutuhkannya, VACUUM menandai ruang itu agar dapat dipakai ulang. Tanpa vacuum, tabel dan indeks membengkak (bloat) dan performa turun. Statistik pg_stat_user_tables diperbarui asinkron sehingga angkanya bisa terlambat beberapa detik.
 
-Bukti: (screenshot .bukti/...)
+Bukti:
+![Q17: sebelum dan sesudah UPDATE](bukti/q17-sebelum-sesudah-update.png)
+![Q17: setelah VACUUM](bukti/q17-setelah-vacuum.png)
 
 18. Q18
 -- Sesi A
-....
+BEGIN;
+SELECT * FROM lab9.rekening WHERE rekening_id = 1 FOR NO KEY UPDATE;
 -- Sesi B
-....
+BEGIN;
+SELECT * FROM lab9.rekening WHERE rekening_id = 1 FOR KEY SHARE;
+SELECT * FROM lab9.rekening WHERE rekening_id = 1 FOR SHARE;
+-- Sesi A
+ROLLBACK;
+-- Sesi B
+ROLLBACK;
 
 Hasil sebelum:
-....
+Tidak ada lock pada rekening 1.
 
 Hasil sesudah:
-....
+Sesi B FOR KEY SHARE: langsung berhasil. Sesi B FOR SHARE: menunggu sekitar <ISI> detik sampai Sesi A ROLLBACK, lalu berhasil.
 
-Status akhir: COMMIT/ROLLBACK (pilih salah satu)
-SQLSTATE (jika ada eror): ...
+Mode lock         | Tujuan umum                                                                  | Konflik dengan mode (transaksi lain terhalang jika memegang salah satunya)
+------------------+------------------------------------------------------------------------------+-----------------------------------------------------------
+FOR UPDATE        | Kunci terkuat; baris akan di-UPDATE/DELETE atau kolom kuncinya berubah       | KEY SHARE, SHARE, NO KEY UPDATE, UPDATE
+FOR NO KEY UPDATE | Kunci untuk UPDATE yang tidak mengubah kolom kunci                           | SHARE, NO KEY UPDATE, UPDATE
+FOR SHARE         | Menjamin baris tidak diubah selama transaksi, tetap boleh dibaca bersama     | NO KEY UPDATE, UPDATE
+FOR KEY SHARE     | Terlemah; menjaga kunci tidak berubah (dipakai pemeriksaan foreign key)      | UPDATE
+
+Status akhir: ROLLBACK (Sesi A), ROLLBACK (Sesi B)
+SQLSTATE (jika ada eror): -
 Penjelasan penyebab:
-....
+Semakin kuat mode lock, semakin banyak mode lain yang berkonflik. FOR NO KEY UPDATE dan FOR KEY SHARE dibuat supaya UPDATE biasa pada kolom non-key tidak memblokir transaksi yang hanya perlu menjaga foreign key tetap valid. Hasil demo sesuai tabel: KEY SHARE tidak konflik dengan NO KEY UPDATE, sedangkan SHARE konflik.
 
-Bukti: (screenshot .bukti/...)
+Bukti:
+![Q18: demo lock](bukti/q18-demo.png)
 
 19. Q19
 -- Sesi A
-....
+BEGIN;
+SELECT * FROM lab9.rekening WHERE rekening_id = 1 FOR UPDATE;
 -- Sesi B
-....
+BEGIN;
+SELECT * FROM lab9.rekening WHERE rekening_id = 1 FOR UPDATE;
+-- Sesi A
+COMMIT;
+-- Sesi B
+COMMIT;
 
 Hasil sebelum:
-....
+Sesi A berhasil mengunci rekening 1 dan menampilkan satu baris (Ani, 1000000.00).
 
 Hasil sesudah:
-....
+Sesi B menunggu (query berjalan terus tanpa hasil) selama sekitar <ISI> detik. Setelah Sesi A COMMIT, Sesi B langsung mendapat baris rekening 1, lalu COMMIT.
 
-Status akhir: COMMIT/ROLLBACK (pilih salah satu)
-SQLSTATE (jika ada eror): ...
+Status akhir: COMMIT (Sesi A), COMMIT (Sesi B)
+SQLSTATE (jika ada eror): -
 Penjelasan penyebab:
-....
+Baris rekening 1 dikunci eksklusif oleh Sesi A sehingga permintaan lock Sesi B masuk antrean. B tidak gagal, hanya menunggu sampai A COMMIT/ROLLBACK melepas lock, lalu mendapat lock dan membaca nilai terbaru.
 
-Bukti: (screenshot .bukti/...)
+Bukti:
+![Q19: Sesi A](bukti/q19-SesiA.png)
+![Q19: Sesi B menunggu](bukti/q19-SesiB-menunggu.png)
+![Q19: Sesi B setelah A COMMIT](bukti/q19-SesiB-lanjut.png)
 
 20. Q20
 -- Sesi A
-....
+BEGIN;
+SELECT * FROM lab9.rekening WHERE rekening_id = 1 FOR UPDATE;
 -- Sesi B
-....
+BEGIN;
+SELECT * FROM lab9.rekening WHERE rekening_id = 2 FOR UPDATE;
+-- Sesi A
+SELECT * FROM lab9.rekening WHERE rekening_id = 2 FOR UPDATE;
+-- Sesi B
+SELECT * FROM lab9.rekening WHERE rekening_id = 1 FOR UPDATE;
 
 Hasil sebelum:
-....
+Sesi A memegang lock rekening 1, Sesi B memegang lock rekening 2.
 
 Hasil sesudah:
-....
+Sesi yang kena error = Sesi <ISI: A/B>. Pesan error:
+SQL Error [40P01]: ERROR: deadlock detected
+  Detail: Process <pid1> waits for ShareLock on transaction <xid>; blocked by process <pid2>.
+  Process <pid2> waits for ShareLock on transaction <xid>; blocked by process <pid1>.
+Sesi lainnya mendapat lock setelah korban ROLLBACK, lalu COMMIT. Deteksi muncul sekitar <ISI> detik setelah permintaan lock kedua.
 
-Status akhir: COMMIT/ROLLBACK (pilih salah satu)
-SQLSTATE (jika ada eror): ...
+Status akhir: sesi korban ROLLBACK; sesi lain COMMIT
+SQLSTATE (jika ada eror): 40P01 (deadlock_detected)
 Penjelasan penyebab:
-....
+A menunggu lock milik B, dan B menunggu lock milik A, sehingga terbentuk siklus tunggu yang tidak selesai sendiri. Setelah deadlock_timeout (1 detik) PostgreSQL memeriksa siklus dan membatalkan satu transaksi (korban) dengan SQLSTATE 40P01 agar yang lain dapat lanjut. Korban harus ROLLBACK dan transaksinya diulang oleh aplikasi.
 
-Bukti: (screenshot .bukti/...)
+Bukti:
+![Q20: Sesi A](bukti/q20-SesiA.png)
+![Q20: Sesi B](bukti/q20-SesiB.png)
+(teks error juga disalin ke bukti/deadlock.md)
 
 21. Q21
 -- Sesi A
-....
+BEGIN;
+SELECT * FROM lab9.rekening WHERE rekening_id = 1 FOR UPDATE;
 -- Sesi B
-....
+BEGIN;
+SELECT * FROM lab9.rekening WHERE rekening_id = 1 FOR UPDATE;
+-- Sesi A
+SELECT * FROM lab9.rekening WHERE rekening_id = 2 FOR UPDATE;
+COMMIT;
+-- Sesi B
+SELECT * FROM lab9.rekening WHERE rekening_id = 2 FOR UPDATE;
+COMMIT;
 
 Hasil sebelum:
-....
+Semua lock dari Q20 sudah dilepas (kedua sesi sudah ROLLBACK/COMMIT).
 
 Hasil sesudah:
-....
+Sesi B menunggu di rekening 1. Sesi A berhasil mengunci rekening 2 lalu COMMIT. Sesi B lalu mendapat rekening 1, kemudian berhasil mengunci rekening 2, dan COMMIT. Tidak ada error.
 
-Status akhir: COMMIT/ROLLBACK (pilih salah satu)
-SQLSTATE (jika ada eror): ...
+Status akhir: COMMIT (Sesi A), COMMIT (Sesi B)
+SQLSTATE (jika ada eror): - (tidak ada deadlock)
 Penjelasan penyebab:
-....
+Karena semua sesi mengunci dari ID terkecil ke terbesar, sesi yang kalah berebut rekening 1 menunggu tanpa memegang lock lain, sehingga tidak ada siklus tunggu. Deadlock dapat dihindari pada skenario ini. Aturan ini hanya efektif jika semua kode aplikasi memakai urutan yang sama.
 
-Bukti: (screenshot .bukti/...)
+Bukti:
+![Q21: Sesi A](bukti/q21-SesiA.png)
+![Q21: Sesi B](bukti/q21-SesiB.png)
 
 22. Q22
 -- Sesi A

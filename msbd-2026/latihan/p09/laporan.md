@@ -213,7 +213,221 @@ Bukti:
 ![Q5: Pesan error pada langkah 3](bukti/q05-eror2.png)
 ![Q5: Hasil akhir setelah ROLLBACK](bukti/q05-hasilAkhir.png)
 
+6. Q6
+-- Sesi A
+BEGIN;
+SELECT saldo FROM lab9.rekening WHERE rekening_id = 1;
+-- Sesi B UPDATE & COMMIT dilakukan di sini
+SELECT saldo FROM lab9.rekening WHERE rekening_id = 1;
+COMMIT;
 
+-- Sesi B
+BEGIN;
+UPDATE lab9.rekening SET saldo = 950000 WHERE rekening_id = 1;
+COMMIT;
+
+Hasil sebelum:
+Ani 1000000.00, Budi 1000000.00
+
+Hasil sesudah:
+Pembacaan ke-1 Sesi A: 1000000.00
+Pembacaan ke-2 Sesi A: 950000.00 (setelah Sesi B COMMIT)
+
+Status akhir: COMMIT (Sesi A), COMMIT (Sesi B)
+SQLSTATE (jika ada eror): -
+Penjelasan penyebab:
+Pada isolasi READ COMMITTED, Sesi A mengalami Non-repeatable Read. Setiap query di READ COMMITTED mengambil snapshot baru, sehingga perubahan dari Sesi B yang sudah di-commit langsung terlihat pada pembacaan kedua Sesi A.
+
+Bukti:
+![Q6: Non-repeatable Read](bukti/q06.png)
+
+7. Q7
+-- Sesi A
+BEGIN ISOLATION LEVEL REPEATABLE READ;
+SELECT saldo FROM lab9.rekening WHERE rekening_id = 1;
+-- Sesi B UPDATE & COMMIT dilakukan di sini
+SELECT saldo FROM lab9.rekening WHERE rekening_id = 1;
+COMMIT;
+
+-- Sesi B
+BEGIN;
+UPDATE lab9.rekening SET saldo = 900000 WHERE rekening_id = 1;
+COMMIT;
+
+Hasil sebelum:
+Ani 1000000.00, Budi 1000000.00
+
+Hasil sesudah:
+Pembacaan ke-1 Sesi A: 1000000.00
+Pembacaan ke-2 Sesi A: 1000000.00 (tetap konsisten)
+
+Status akhir: COMMIT (Sesi A), COMMIT (Sesi B)
+SQLSTATE (jika ada eror): -
+Penjelasan penyebab:
+Pada REPEATABLE READ, snapshot diambil sekali saat query pertama transaksi dijalankan. Sesi A mempertahankan snapshot awal tersebut sehingga tetap melihat saldo 1000000.00 dan Non-repeatable Read berhasil dicegah.
+
+Bukti:
+![Q7: REPEATABLE READ](bukti/q07.png)
+
+8. Q8
+-- Sesi A (READ COMMITTED)
+BEGIN ISOLATION LEVEL READ COMMITTED;
+SELECT COUNT(*) FROM lab9.rekening WHERE saldo >= 500000;
+-- Sesi B INSERT & COMMIT dilakukan di sini
+SELECT COUNT(*) FROM lab9.rekening WHERE saldo >= 500000;
+COMMIT;
+
+-- Sesi A (REPEATABLE READ)
+BEGIN ISOLATION LEVEL REPEATABLE READ;
+SELECT COUNT(*) FROM lab9.rekening WHERE saldo >= 500000;
+-- Sesi B INSERT & COMMIT dilakukan di sini
+SELECT COUNT(*) FROM lab9.rekening WHERE saldo >= 500000;
+COMMIT;
+
+-- Sesi B
+INSERT INTO lab9.rekening VALUES (3, 'Charlie', 750000);
+COMMIT;
+
+Hasil sebelum:
+Jumlah rekening dengan saldo >= 500000 adalah 2.
+
+Hasil sesudah:
+Pada READ COMMITTED: Query ke-1 = 2 baris, Query ke-2 = 3 baris (terjadi Phantom Read).
+Pada REPEATABLE READ: Query ke-1 = 2 baris, Query ke-2 = 2 baris (Phantom Read dicegah).
+
+Status akhir: COMMIT
+SQLSTATE (jika ada eror): -
+Penjelasan penyebab:
+Pada READ COMMITTED, baris baru yang di-insert Sesi B masuk ke snapshot query kedua Sesi A. Pada REPEATABLE READ, MVCC PostgreSQL secara otomatis mencegah Phantom Read karena snapshot transaksi dikunci sejak query pembacaan pertama.
+
+Bukti:
+![Q8: Phantom Read](bukti/q08.png)
+
+9. Q9
+-- Sesi A
+BEGIN;
+UPDATE lab9.rekening SET saldo = 500000 WHERE rekening_id = 1;
+-- Belum COMMIT
+ROLLBACK;
+
+-- Sesi B
+BEGIN ISOLATION LEVEL READ UNCOMMITTED;
+SELECT saldo FROM lab9.rekening WHERE rekening_id = 1;
+COMMIT;
+
+Hasil sebelum:
+Ani 1000000.00
+
+Hasil sesudah:
+Sesi B membaca saldo 1000000.00 (data lama yang ter-commit), bukan 500000.00.
+
+Status akhir: ROLLBACK (Sesi A), COMMIT (Sesi B)
+SQLSTATE (jika ada eror): -
+Penjelasan penyebab:
+PostgreSQL tidak mendukung Dirty Read. Meskipun Sesi B diset ke READ UNCOMMITTED, PostgreSQL secara internal memperlakukannya sama seperti READ COMMITTED. Data uncommitted Sesi A tidak pernah terlihat oleh Sesi B.
+
+Bukti:
+![Q9: Dirty Read](bukti/q09.png)
+
+10. Q10
+-- Sesi A
+BEGIN;
+SELECT saldo FROM lab9.rekening WHERE rekening_id = 1; -- 1000000.00
+UPDATE lab9.rekening SET saldo = 925000 WHERE rekening_id = 1;
+COMMIT;
+
+-- Sesi B
+BEGIN;
+SELECT saldo FROM lab9.rekening WHERE rekening_id = 1; -- 1000000.00
+UPDATE lab9.rekening SET saldo = 925000 WHERE rekening_id = 1;
+COMMIT;
+
+Hasil sebelum:
+Ani 1000000.00
+
+Hasil sesudah:
+Saldo akhir Ani: 925000.00 (Seharusnya 850000.00 jika 2x penarikan 75000 berhasil).
+
+Status akhir: COMMIT (Sesi A), COMMIT (Sesi B)
+SQLSTATE (jika ada eror): -
+Penjelasan penyebab:
+Terjadi Lost Update karena kedua sesi membaca data basi yang sama (1000000.00), menghitung di aplikasi, lalu menulis nilai tetap (925000.00). Update Sesi B menimpa hasil update Sesi A tanpa ada error.
+
+Bukti:
+![Q10: Lost Update](bukti/q10.png)
+
+11. Q11
+-- Sesi A
+SELECT * FROM lab9.rekening ORDER BY rekening_id;
+
+-- Sesi B
+-- Menjalankan skenario verifikasi anomali
+
+Hasil sebelum:
+Ani 1000000.00, Budi 1000000.00
+
+Hasil sesudah:
+Kondisi tabel ringkas menggambarkan anomali yang berhasil direproduksi pada Langkah 2.
+
+Status akhir: COMMIT
+SQLSTATE (jika ada eror): -
+Penjelasan penyebab:
+Pengujian mengonfirmasi bahwa READ COMMITTED rentan terhadap Non-repeatable Read, Phantom Read, dan Lost Update, namun bebas dari Dirty Read.
+
+Bukti:
+![Q11: Ringkasan Anomali](bukti/q11.png)
+
+12. Q12
+-- Sesi A
+BEGIN;
+UPDATE lab9.rekening SET saldo = saldo - 75000 WHERE rekening_id = 1 AND saldo >= 75000;
+COMMIT;
+
+-- Sesi B
+BEGIN;
+UPDATE lab9.rekening SET saldo = saldo - 75000 WHERE rekening_id = 1 AND saldo >= 75000;
+COMMIT;
+
+Hasil sebelum:
+Ani 1000000.00
+
+Hasil sesudah:
+Saldo akhir Ani: 850000.00
+
+Status akhir: COMMIT (Sesi A), COMMIT (Sesi B)
+SQLSTATE (jika ada eror): -
+Penjelasan penyebab:
+Lost Update dicegah dengan pembaruan atomik (menghitung langsung di kolom basis data `saldo = saldo - 75000`). PostgreSQL mengambil row-lock saat UPDATE dan mengevaluasi ulang kondisi WHERE terhadap data terbaru yang di-commit.
+
+Bukti:
+![Q12: Atomic Update](bukti/q12.png)
+
+13. Q13
+-- Sesi A
+BEGIN;
+SELECT saldo FROM lab9.rekening WHERE rekening_id = 1 FOR UPDATE;
+UPDATE lab9.rekening SET saldo = saldo - 75000 WHERE rekening_id = 1;
+COMMIT;
+
+-- Sesi B
+BEGIN;
+SELECT saldo FROM lab9.rekening WHERE rekening_id = 1 FOR UPDATE; -- Menunggu Sesi A COMMIT
+UPDATE lab9.rekening SET saldo = saldo - 75000 WHERE rekening_id = 1;
+COMMIT;
+
+Hasil sebelum:
+Ani 1000000.00
+
+Hasil sesudah:
+Sesi B mengalami blocking/menunggu sampai Sesi A COMMIT. Saldo akhir Ani: 850000.00.
+
+Status akhir: COMMIT (Sesi A), COMMIT (Sesi B)
+SQLSTATE (jika ada eror): -
+Penjelasan penyebab:
+`SELECT ... FOR UPDATE` memasang row lock eksklusif, memaksa Sesi B antre sampai Sesi A selesai. Sesi B kemudian membaca saldo terbaru (925000.00) setelah Sesi A COMMIT, sehingga Lost Update terhindari.
+
+Bukti:
+![Q13: FOR UPDATE](bukti/q13.png)
 
 14. Q14
 -- Sesi A

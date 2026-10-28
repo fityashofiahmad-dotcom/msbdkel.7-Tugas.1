@@ -620,22 +620,35 @@ Bukti:
 
 22. Q22
 -- Sesi A
-....
+BEGIN;
+UPDATE lab9.rekening SET saldo = saldo - 50000 WHERE rekening_id = 1;
+-- Transaksi dibiarkan menggantung tanpa COMMIT/ROLLBACK (idle in transaction)...
+
 -- Sesi B
-....
+BEGIN;
+UPDATE lab9.rekening SET saldo = saldo + 50000 WHERE rekening_id = 1;
+-- Sesi B terhalang (lock wait/blocking) menunggu Sesi A.
+
+-- Sesi A
+COMMIT;
+
+-- Sesi B (setelah Sesi A COMMIT)
+COMMIT;
 
 Hasil sebelum:
-....
+Sesi A dan Sesi B sama-sama siap mengeksekusi UPDATE pada baris rekening_id = 1.
 
 Hasil sesudah:
-....
+Sesi B mengalami blocking (menunggu) selama Sesi A belum mengakhiri transaksi. Tepat setelah Sesi A menjalankan COMMIT, Sesi B berhasil mengeksekusi UPDATE-nya lalu COMMIT. Tidak ada error yang terjadi.
 
-Status akhir: COMMIT/ROLLBACK (pilih salah satu)
-SQLSTATE (jika ada eror): ...
+Status akhir: COMMIT (Sesi A), COMMIT (Sesi B)
+SQLSTATE (jika ada eror): -
 Penjelasan penyebab:
-....
+Antrean lock panjang (lock wait) adalah keterlambatan temporal di mana Sesi B menunggu Sesi A melepaskan row lock. Ketergantungan ini bersifat satu arah (A memblokir B) dan akan selesai secara otomatis begitu Sesi A COMMIT atau ROLLBACK. Berbeda dengan deadlock yang merupakan ketergantungan melingkar (A memblokir B dan B memblokir A) sehingga PostgreSQL harus membatalkan salah satu transaksi dengan SQLSTATE 40P01.
 
-Bukti: (screenshot .bukti/...)
+Bukti:
+![Q22: Sesi A menahan lock](bukti/q22-SesiA.png)
+![Q22: Sesi B mengalami lock wait](bukti/q22-SesiB-blocking.png)
 
 23. Q23
 -- Sesi A

@@ -852,23 +852,50 @@ Bukti:
 ![Q28: SIReadLock non-blocking demonstration](bukti/q28-sireadlock.png)
 
 29. Q29
--- Sesi A
-....
--- Sesi B
-....
+-- Pseudocode Strategi Retry Transaksi (Python Concept)
+/*
+import time
+import random
+
+MAX_RETRIES = 5
+BASE_BACKOFF_MS = 100
+
+def execute_with_retry(db_conn, tx_func):
+    attempt = 0
+    while True:
+        try:
+            db_conn.execute("BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;")
+            result = tx_func(db_conn)
+            db_conn.execute("COMMIT;")
+            
+            # Efek samping eksternal dijalankan HANYA SETELAH COMMIT BERHASIL
+            send_external_email(result)
+            return result
+        except DatabaseError as e:
+            db_conn.execute("ROLLBACK;")
+            attempt += 1
+            if e.sqlstate in ('40001', '40P01') and attempt <= MAX_RETRIES:
+                sleep_time = (BASE_BACKOFF_MS * (2 ** (attempt - 1))) + random.uniform(0, 50)
+                time.sleep(sleep_time / 1000.0)
+                continue
+            else:
+                raise e
+*/
 
 Hasil sebelum:
-....
+Aplikasi rentan gagal total saat menerima error sementara seperti SQLSTATE 40001 (serialization failure) atau 40P01 (deadlock).
 
 Hasil sesudah:
-....
+Transaksi yang mengalami error sementara di-retry secara otomatis di latar belakang hingga berhasil atau mencapai batas maksimum percobaan.
 
-Status akhir: COMMIT/ROLLBACK (pilih salah satu)
-SQLSTATE (jika ada eror): ...
+Status akhir: Dokumentasi / Pseudocode Strategi Retry
+SQLSTATE (jika ada eror): -
 Penjelasan penyebab:
-....
+Error 40001 dan 40P01 bukan merupakan bug aplikasi, melainkan mekanisme normal database untuk menjaga konsistensi data. Oleh karena itu, aplikasi harus menerapkan retry logic yang mengulang seluruh transaksi dari BEGIN dengan teknik exponential backoff dan jitter untuk mengurai konkurensi.
+Operasi eksternal (seperti pengiriman email atau call API payment) WAJIB dijalankan setelah COMMIT berhasil. Jika dijalankan di dalam transaksi, retry akan menyebabkan email terkirim ganda (duplicate execution) padahal transaksi database sebelumnya mengalami ROLLBACK.
 
-Bukti: (screenshot .bukti/...)
+Bukti:
+![Q29: Diagram alir retry logic](bukti/q29-retry-logic.png)
 
 ## Tabel Ringkasan Anomali (Q11 dan Q30)
 Anomali | Cara reproduksi | Isolation Level | Hasil yang diamati | Penyebab | Dampak | Mitigasi 

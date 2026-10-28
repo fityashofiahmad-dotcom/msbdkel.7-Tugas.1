@@ -652,22 +652,33 @@ Bukti:
 
 23. Q23
 -- Sesi A
-....
--- Sesi B
-....
+BEGIN;
+SET LOCAL lock_timeout = '3s';
+SET LOCAL statement_timeout = '5s';
+SET LOCAL idle_in_transaction_session_timeout = '10s';
+SHOW lock_timeout;
+SHOW statement_timeout;
+SHOW idle_in_transaction_session_timeout;
+SHOW deadlock_timeout;
+COMMIT;
 
 Hasil sebelum:
-....
+Pengaturan timeout global server bernilai default (lock_timeout = 0, statement_timeout = 0, idle_in_transaction_session_timeout = 0, deadlock_timeout = 1s).
 
 Hasil sesudah:
-....
+Parameter berhasil diubah secara lokal di dalam blok transaksi dan kembali ke nilai semula setelah transaksi di-COMMIT.
 
-Status akhir: COMMIT/ROLLBACK (pilih salah satu)
-SQLSTATE (jika ada eror): ...
+Status akhir: COMMIT
+SQLSTATE (jika ada eror): -
 Penjelasan penyebab:
-....
+Fungsi masing-masing parameter timeout:
+- lock_timeout: Batas waktu maksimum query menunggu untuk mendapatkan lock (membatalkan query dengan SQLSTATE 55P03 jika terlampaui).
+- statement_timeout: Batas waktu maksimum eksekusi untuk satu perintah SQL tunggal demi mencegah long-running query.
+- idle_in_transaction_session_timeout: Batas waktu maksimum sesi dibiarkan idle dalam kondisi transaksi terbuka (BEGIN), memutus koneksi gantung agar lock dilepaskan.
+- deadlock_timeout: Batas waktu tunggu sebelum PostgreSQL mengaktifkan pemeriksaan siklus deadlock (deadlock detector).
 
-Bukti: (screenshot .bukti/...)
+Bukti:
+![Q23: Pemeriksaan parameter timeout](bukti/q23-timeout-show.png)
 
 24. Q24
 -- Sesi A

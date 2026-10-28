@@ -720,22 +720,30 @@ Bukti:
 ![Q24: Sesi B menggunakan SKIP LOCKED](bukti/q24-SesiB.png)
 25. Q25
 -- Sesi A
-....
+BEGIN;
+SELECT * FROM lab9.rekening WHERE rekening_id = 1 FOR UPDATE;
+
 -- Sesi B
-....
+BEGIN;
+SELECT * FROM lab9.rekening WHERE rekening_id = 1 FOR UPDATE NOWAIT;
+
+-- Sesi A & B
+ROLLBACK;
 
 Hasil sebelum:
-....
+Baris rekening_id = 1 belum dikunci oleh sesi mana pun.
 
 Hasil sesudah:
-....
+Sesi A berhasil mengunci baris rekening_id = 1. Sesi B langsung gagal seketika (fail-fast) saat mengeksekusi query.
 
-Status akhir: COMMIT/ROLLBACK (pilih salah satu)
-SQLSTATE (jika ada eror): ...
+Status akhir: ROLLBACK (Sesi A), ROLLBACK (Sesi B)
+SQLSTATE (jika ada eror): 55P03 (lock_not_available)
 Penjelasan penyebab:
-....
+Klausul NOWAIT menginstruksikan PostgreSQL untuk langsung membatalkan perintah jika baris sasaran sedang dikunci oleh transaksi lain, alih-alih masuk ke antrean tunggu (lock wait). Fitur ini digunakan ketika aplikasi membutuhkan kepastian eksekusi instan dan tidak boleh terhenti oleh blocking.
 
-Bukti: (screenshot .bukti/...)
+Bukti:
+![Q25: Sesi A FOR UPDATE](bukti/q25-SesiA.png)
+![Q25: Sesi B FOR UPDATE NOWAIT error](bukti/q25-SesiB-error.png)
 
 26. Q26
 -- Sesi A

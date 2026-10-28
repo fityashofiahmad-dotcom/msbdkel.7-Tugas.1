@@ -674,29 +674,31 @@ Penjelasan penyebab:
 Bukti: (screenshot .bukti/...)
 
 ## Tabel Ringkasan Anomali (Q11 dan Q30)
-| Anomali | Cara reproduksi | Isolation Level | Hasil yang diamati | Penyebab | Dampak | Mitigasi |
-| Dirty read | Isi | Isi | Isi | Isi | Isi | Isi |
-| Non-repeatable read | Isi | Isi | Isi | Isi | Isi | Isi |
-| Phantom read | Isi | Isi | Isi | Isi | Isi | Isi |
-| Lost update | Isi | Isi | Isi | Isi | Isi | Isi |
-| Write skew | Isi | Isi | Isi | Isi | Isi | Isi |
-| Pembacaan tidak konsisten | Isi | Isi | Isi | Isi | Isi | Isi |
+Anomali | Cara reproduksi | Isolation Level | Hasil yang diamati | Penyebab | Dampak | Mitigasi 
+--------+-----------------+-----------------+--------------------+----------+--------+-------------
+Dirty read                | A mengubah saldo tanpa COMMIT,B Menjalankan SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED lalu SELECT | READ UNCOMMITTED | Tidak terjadi. B melihat saldo lama. | PostgreSQL memperlakukan READ UNCOMMITTED sama dengan READ COMMITTED. MVCC hanya menampilkan versi baris yang sudah di-COMMIT | Tidak ada karena sudah dicegah | Tidak perlu tindakan khusus 
+Non-repeatable read       | A: BEGIN, SELECT saldo. B: UPDATE + COMMIT. A: SELECT lagi | READ COMMITTED (terjadi), REPEATABLE READ (tidak terjadi) | Pada READ COMMITTED, SELECT kedua A menampilkan nilai baru. Pada REPEATABLE READ nilainya tetap  | Pada READ COMMITTED setiap pernyataan memakai snapshot baru | Hasil dalam satu transaksi bisa berubah sehingga perhitungan tidak konsisten | Pakai REPEATABLE READ atau lebih tinggi 
+Phantom read              | A menghitung baris dengan saldo di atas nilai tertentu. B INSERT baris yang cocok + COMMIT. A menghitung lagi. | READ COMMITTED (terjadi), REPEATABLE READ (tidak terjadi di PostgreSQL) | Jumlah baris bertambah pada READ COMMITTED tapi tetap pada REPEATABLE READ. | Snapshot baru per pernyataan pada READ COMMITTED. | Laporan hitung atau agregat di tengah transaksi tidak stabil. | Pakai REPEATABLE READ atau SERIALIZABLE 
+Lost update               | A dan B membaca saldo yang sama, menghitung di aplikasi, lalu menulis nilai tetap. | READ COMMITTED (terjadi) | Tulisan kedua menimpa hasil sesi pertama. Pada REPEATABLE READ sesi kedua mendapat eror 40001 | Nilai baru dihitung dari data lama yang dibaca, bukan dari nilai baru di database | Perubahan satu sesi hilang, saldo salah | SET saldo = saldo - x, SELECT .... FOR UPDATE, atau kolom version_no 
+Write skew                | Dua transaksi membaca jumlah dokter aktif lalu menonaktifkan dokter berbeda. | REPEATABLE READ (terjadi), SERIALIZABLE (dicegah) | Pada REPEATABLE READ keduanya COMMIT dan aturan "minimal 1 dokter aktif" dilanggar. Pada SERIALIZABLE salah satu dibatalkan (SQLSTATE 40001) | Kedua transaksi membaca snapshot yang sama tapi menulis baris berbeda, sehingga tidak ada konflik tulis. | Aturan bisnis lintas baris dilanggar | SERIALIZABLE + retry, atau FOR UPDATE pada baris terkait. 
+Pembacaan tidak konsisten | A membaca saldo Ani (1000000.00), B transfer Ani ->  Budi 100000 + COMMIT, A membaca saldo Budi (1100000.00). | READ COMMITTED (terjadi), REPEATABLE READ (tidak terjadi) | A melihat total 2100000.00, padahal seharusnya 2000000.00 | Dua SELECT memakai snapshot yang berbeda | Laporan/penjumalahan menghasilkan angka yang tidak pernah benar-benar ada | REPEATABLE READ, atau hitung dalam satu pernyataan. 
 
 ## Rekomendaasi Isolation Level (Q31)
-| Kebutuhan | Isolation Level | Alasan dan Kompromi |
-| Pembacaan sederhana yang menerima perubahan antarpernyataan | Isi | Isi |
-| Laporan yang membutuhkan snapshot konsisten | Isi | Isi |
-| Transaksi dengan aturan bisnis lintas beberapa baris | Isi | Isi |
+Kebutuhan | Isolation Level | Alasan dan Kompromi
+----------+-----------------+----------------------------
+Pembacaan sederhana yang menerima perubahan antarpernyataan | READ COMMITTED (default) | Paling ringan dan jarang menimbulkan error serialisasi. Risikonya non-repeatable read dan phantom, yang tidak masalah untuk satu query berdiri sendiri 
+Laporan yang membutuhkan snapshot konsisten | REPEATABLE READ (idealnya READ ONLY) | Semua query dalam transaksi melihat snapshot yang sama sehingga total laporan konsisten. Komprominya jika transaksi menulis dan ada update konkuren pada baris yang sama, dapat terjadi error 40001
+Transaksi dengan aturan bisnis lintas beberapa baris | SERIALIZABLE (atau REPEATABLE READ + FOR UPDATE) | Mencegah write skew. Komprominya dengan transaksi dapat dibatalkan dengan SQLSTATE 40001 dan ada overhead pelacakan (SIReadLock)
 
-* **Risiko serialization failure dan cara menanganinya:
-....
+* **Risiko serialization failure dan cara menanganinya:*
+Pada isolation level tinggi, PostgreSQL dapat membatalkan transaksi yang berisiko menimbulkan hasil yang tidak setara dengan eksekusi berurutan (SQLSTATE 40001). Ini bukan bug melainkan cara menjaga kebenaran data. Penanganannya dengan aplikasi harus mengulang seluruh transaksi dari BEGIN, membatasi jumlah percobaan, memakai jeda yang bertambah dengan jitter, dan menjalankan operasi eksternal hanya setelah COMMIT berhasil.
 
 ## Kesimpulan berbasis Hasil Eksperimen (Q32)
-1. Pelajaran 1: ....
---Bukti: (Hasil query/urutan kejadian/pesan eror dangan rujukan nomor Q)
+1. Pelajaran 1: MVCC membuat sesi lain tidak melihat perubahan yang belum di-COMMIT sehingga tiak aada dirty read di PostgreSQL.
+--Bukti: Pada Q2, Sesi B tetap melihat Ani 1000000.00 dan Budi 1000000.00 saat Sesi A sudah mengubahnya menjadi 900000.00/1100000.00 tetapi belum COMMIT. pADA q9, READ UNCOMMITTED juga tidak menampilkan perubahan yang belum di-COMMIT.
 
-2. Pelajaran 2: ....
---Bukti: (Hasil query/urutan kejadian/pesan eror dangan rujukan nomor Q)
+2. Pelajaran 2: Menghitung nilai di sisi aplikasi menyebabkan lost update, sedangkan pembaruan automik dan penguncian baris mencegaahnya.
+--Bukti: pada Q10, hasil satu sesi tertimpa karena kedua sesi menulis nilai tetap dari data lama. Pada Q12 (saldo = saldo - 10000) dan Q13 (FOR UPDATE, sesi kedua menunggu sampai sesi pertama selesai), saldo akhir benar.
 
-3. Pelajaran 3: ....
---Bukti: (Hasil query/urutan kejadian/pesan eror dangan rujukan nomor Q)
+3. Pelajaran 3: Deadlock dan serialization failure adalah error yang wajar, sehingga aplikasi harus siap mengulang transaksi.
+--Bukti: Q20 menghasilkan error deadlock SQLSTATE 40P01 pada salah satu sesi, dan Q21 menunjukkan urutan penguncian yang konsisten menghindarinya. Q26 menunjukkan write skew lolos di REPEATABLE READ, sedangkan Q27 menghasilkan SQLSTATE 40001 pada SERIALIZABLE.

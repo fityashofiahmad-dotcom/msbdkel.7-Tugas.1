@@ -825,22 +825,31 @@ Bukti:
 
 28. Q28
 -- Sesi A
-....
+BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+SELECT * FROM lab9.dokter_jaga WHERE aktif = TRUE;
+
 -- Sesi B
-....
+BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+SELECT * FROM lab9.dokter_jaga WHERE aktif = TRUE;
+UPDATE lab9.dokter_jaga SET aktif = FALSE WHERE id = 2;
+COMMIT;
+
+-- Sesi A
+ROLLBACK;
 
 Hasil sebelum:
-....
+Kedua transaksi berjalan pada level SERIALIZABLE.
 
 Hasil sesudah:
-....
+Sesi B dapat melakukan SELECT dan UPDATE tanpa terhalang (blocking) oleh SELECT milik Sesi A.
 
-Status akhir: COMMIT/ROLLBACK (pilih salah satu)
-SQLSTATE (jika ada eror): ...
+Status akhir: ROLLBACK (Sesi A), COMMIT (Sesi B)
+SQLSTATE (jika ada eror): -
 Penjelasan penyebab:
-....
+Dalam memeriksa serialisasi, PostgreSQL memasang SIReadLock (Snapshot Isolation Read Lock) in-memory pada tingkat tuple, halaman, atau tabel saat SELECT dijalankan. SIReadLock hanya berfungsi sebagai penanda/pencatat (ephemeral lock marker) untuk melacak konflik read-write dependencies secara deklaratif. Oleh karena itu, SELECT pada level SERIALIZABLE tidak memblokir transaksi lain seperti SELECT ... FOR UPDATE (pembaca tidak memblokir penulis dan penulis tidak memblokir pembaca).
 
-Bukti: (screenshot .bukti/...)
+Bukti:
+![Q28: SIReadLock non-blocking demonstration](bukti/q28-sireadlock.png)
 
 29. Q29
 -- Sesi A

@@ -8,16 +8,7 @@
 | Mar'ie Rizqullah | 251402129 | Langkah 4 (Q22 - Q23) + Langkah 5 |
 
 ## Struktur Folder
-latihan/p09/
-├── README.md
-├── laporan.md
-├── q00_setup.sql
-├── q01_q32_transaksi.sql
-└── bukti/
-    ├── isolation-level.md
-    ├── deadlock.md
-    ├── serializable.md
-    └── hasil-sesi.txt
+...
 
 ## Cara Menjalankan
 1. Jalankan q00_setup.sql untuk membuat skema lab9, tabel rekening, dan data awal.

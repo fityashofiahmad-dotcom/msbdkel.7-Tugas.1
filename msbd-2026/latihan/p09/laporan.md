@@ -1,25 +1,21 @@
 # Laporan Latihan Kelompok 7 Pertemuan 9
 
 ## Anggota dan Kontribusi
-| Nama | NIM | Kontribusi | Commit |
-| Andika Chairul Ilham | 251402047 | Langkah 3 (Q14 - Q17), Langkah 4 (Q18 - Q21) | Commit |
-| Fahri Arizal | 251402102 | Langkah 2 (Q6 - Q11), Langkah 3 (Q12 - Q13) | Commit |
-| Fitya Shofi Ahmad | 251402132 | Langkah 1, Langkah 6 | Commit |
-| Mar'ie Rizqullah | 251402129 | Langkah 4 (Q22 - Q23), Langkah 5 | Commit |
+Nama                 |    NIM    | Kontribusi                                   | Commit 
+---------------------+-----------+----------------------------------------------+-------------------
+Andika Chairul Ilham | 251402047 | Langkah 3 (Q14 - Q17), Langkah 4 (Q18 - Q21) | Commit 
+Fahri Arizal         | 251402102 | Langkah 2 (Q6 - Q11), Langkah 3 (Q12 - Q13)  | Commit 
+Fitya Shofi Ahmad    | 251402132 | Langkah 1, Langkah 6                         | Commit 
+Mar'ie Rizqullah     | 251402129 | Langkah 4 (Q22 - Q23), Langkah 5             | Commit 
 
-## Lingkungan Eksperimen
-| Item | Isi |
-| Versi PostgreSQL | Isi |
-| Alat yang digunakan | Isi |
-| Skema | lab9 |
-
-## Konfigusari Hasil PErintah SHOW
-| Parameter | Nilai |
-| transaction_isolation | Isi |
-| deadlock_timeout | Isi |
-| lock_timeout | Isi |
-| statement_timeout | Isi |
-| idle_in_transaction_session_timeout | Isi |
+## Konfigurasi relevan (hasil perintah SHOW)
+Parameter                           | Nilai 
+------------------------------------+-----------------
+transaction_isolation               | read committed
+deadlock_timeout                    | 1s
+lock_timeout                        | 0
+statement_timeout                   | 0
+idle_in_transaction_session_timeout | 0
 
 ## Data Awal
 1. Hasil dari SELECT * FROM lab9.rekening ORDER BY rekening_id;

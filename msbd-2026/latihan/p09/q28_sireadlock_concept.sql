@@ -1,4 +1,3 @@
-/*
 1. FUNGSI SIReadLock:
    SIReadLock (Snapshot Isolation Read Lock) adalah lock in-memory (virtual) yang 
    digunakan PostgreSQL untuk mencatat read dependency. Kunci ini TIDAK MEMBLOKIR 
@@ -14,4 +13,4 @@
    - SELECT ... FOR UPDATE : Menggunakan heavyweight lock yang memblokir (block) sesi lain.
    - SIReadLock             : Hanya berupa penanda deklaratif (non-blocking) untuk melacak 
                              konflik pembacaan/penulisan secara efisien.
-*/
+

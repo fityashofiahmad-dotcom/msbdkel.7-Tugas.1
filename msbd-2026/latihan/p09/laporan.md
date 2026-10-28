@@ -6,7 +6,7 @@ Nama                 |    NIM    | Kontribusi                                   
 Andika Chairul Ilham | 251402047 | Langkah 3 (Q14 - Q17), Langkah 4 (Q18 - Q21) | Commit 
 Fahri Arizal         | 251402102 | Langkah 2 (Q6 - Q11), Langkah 3 (Q12 - Q13)  | Commit 
 Fitya Shofi Ahmad    | 251402132 | Langkah 1, Langkah 6                         | Commit 
-Mar'ie Rizqullah     | 251402129 | Langkah 4 (Q22 - Q23), Langkah 5             | Commit 
+Mar'ie Rizqullah     | 251402129 | Langkah 4 (Q22 - Q29), Langkah 5             | Commit 
 
 ## Konfigurasi relevan (hasil perintah SHOW)
 Parameter                           | Nilai 

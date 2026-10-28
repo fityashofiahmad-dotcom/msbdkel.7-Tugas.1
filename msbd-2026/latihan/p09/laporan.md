@@ -790,22 +790,38 @@ Bukti:
 
 27. Q27
 -- Sesi A
-....
+BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+SELECT COUNT(*) FROM lab9.dokter_jaga WHERE aktif = TRUE;
+
 -- Sesi B
-....
+BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+SELECT COUNT(*) FROM lab9.dokter_jaga WHERE aktif = TRUE;
+
+-- Sesi A
+UPDATE lab9.dokter_jaga SET aktif = FALSE WHERE id = 1;
+COMMIT;
+
+-- Sesi B
+UPDATE lab9.dokter_jaga SET aktif = FALSE WHERE id = 2;
+-- Mengalami error saat UPDATE/COMMIT
+
+-- Sesi B
+ROLLBACK;
 
 Hasil sebelum:
-....
+Tabel dokter_jaga dipulihkan ke kondisi awal (2 dokter aktif).
 
 Hasil sesudah:
-....
+Sesi A berhasil melakukan COMMIT. Sesi B dibatalkan oleh PostgreSQL dengan pesan error serialization failure.
 
-Status akhir: COMMIT/ROLLBACK (pilih salah satu)
-SQLSTATE (jika ada eror): ...
+Status akhir: COMMIT (Sesi A), ROLLBACK (Sesi B)
+SQLSTATE (jika ada eror): 40001 (serialization_failure)
 Penjelasan penyebab:
-....
+Isolation level SERIALIZABLE menggunakan Serializable Snapshot Isolation (SSI) untuk melacak dependensi read/write antar-transaksi secara bersamaan. Saat Sesi A COMMIT dan Sesi B mencoba mengubah data yang saling bergantung pada pembacaan sebelumnya, PostgreSQL mendeteksi potensi anomali Write Skew dan menggagalkan Sesi B dengan SQLSTATE 40001 agar konsistensi data tetap terjaga.
 
-Bukti: (screenshot .bukti/...)
+Bukti:
+![Q27: Sesi A COMMIT](bukti/q27-SesiA.png)
+![Q27: Sesi B Serialization Error](bukti/q27-SesiB-error.png)
 
 28. Q28
 -- Sesi A

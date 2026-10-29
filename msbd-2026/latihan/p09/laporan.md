@@ -60,6 +60,7 @@ Data awal terbukti dua rekening dengan saldo masing-masing 1.000.000, sehingga t
 Bukti:
 ![Q1: hasil SELECT data awal](bukti/images/q01-SesiA-1.png)
 ![Q1: hasil SELECT total saldo](bukti/images/q01-SesiA-2.png)
+(Lihat bukti/isolation-level.md (bagian Q01))
 
 2. Q2
 -- Sesi A
@@ -92,6 +93,7 @@ Sesi A melihat perubahannya sendiri, sedangkan Sesi B tetap melihat saldo lama. 
 Bukti:
 ![Q2: Hasil SELECT Sesi A tanpa COMMIT](bukti/images/q02-SesiA.png)
 ![Q2: Hasil SELECT Sesi B saat Sesi A belum COMMIT](bukti/images/q02-SesiB.png)
+(Lihat bukti/isolation-level.md (bagian Q02))
 
 3. Q3
 * **Percobaan 1: COMMIT*
@@ -134,6 +136,8 @@ Bukti:
 ![Q3: Percobaan 1 COMMIT Sesi B](bukti/images/Q03-SesiB-COMMIT.png)
 ![Q3: Percobaan 2 ROLLBACK Sesi A](bukti/images/q03-SesiA-ROLLBACK.png)
 ![Q3: Percobaan 2 ROLLBACK Sesi B](bukti/images/q03-SesiB-ROLLBACK.png)
+(Lihat bukti/isolation-level.md (bagian Q03))
+
 
 4. Q4
 -- Sesi A
@@ -180,6 +184,7 @@ Bukti:
 ![Q4: hasil transfer 2](bukti/images/q04-setelahTransfer2.png)
 ![Q4: Hasil ROLLBACK TO SAVEPOINT sp1](bukti/images/q04-setelahROLLBACK-TO-SAVEPOINT.png)
 ![Q4: Hasil COMMIT](bukti/images/q04-setelahCOMMIT.png)
+(Lihat bukti/isolation-level.md (bagian Q04))
 
 5. Q5
 -- Sesi A
@@ -220,6 +225,7 @@ Bukti:
 ![Q5: Pesan error padan langkah 2](bukti/images/q05-eror1.png)
 ![Q5: Pesan error pada langkah 3](bukti/images/q05-eror2.png)
 ![Q5: Hasil akhir setelah ROLLBACK](bukti/images/q05-hasilAkhir.png)
+(Lihat bukti/isolation-level.md (bagian Q05))
 
 6. Q6
 -- Sesi A
@@ -247,7 +253,7 @@ Penjelasan penyebab:
 Pada isolasi READ COMMITTED, Sesi A mengalami Non-repeatable Read. Setiap query di READ COMMITTED mengambil snapshot baru, sehingga perubahan dari Sesi B yang sudah di-commit langsung terlihat pada pembacaan kedua Sesi A.
 
 Bukti:
-![Q6: Non-repeatable Read]()
+(Lihat bukti/isolation-level.md (bagian Q06))
 
 7. Q7
 -- Sesi A
@@ -275,7 +281,7 @@ Penjelasan penyebab:
 Pada REPEATABLE READ, snapshot diambil sekali saat query pertama transaksi dijalankan. Sesi A mempertahankan snapshot awal tersebut sehingga tetap melihat saldo 1000000.00 dan Non-repeatable Read berhasil dicegah.
 
 Bukti:
-![Q7: REPEATABLE READ]()
+(Lihat bukti/isolation-level.md (bagian Q07))
 
 8. Q8
 -- Sesi A (READ COMMITTED)
@@ -309,7 +315,7 @@ Penjelasan penyebab:
 Pada READ COMMITTED, baris baru yang di-insert Sesi B masuk ke snapshot query kedua Sesi A. Pada REPEATABLE READ, MVCC PostgreSQL secara otomatis mencegah Phantom Read karena snapshot transaksi dikunci sejak query pembacaan pertama.
 
 Bukti:
-![Q8: Phantom Read]()
+(Lihat bukti/isolation-level.md (bagian Q08))
 
 9. Q9
 -- Sesi A
@@ -335,7 +341,7 @@ Penjelasan penyebab:
 PostgreSQL tidak mendukung Dirty Read. Meskipun Sesi B diset ke READ UNCOMMITTED, PostgreSQL secara internal memperlakukannya sama seperti READ COMMITTED. Data uncommitted Sesi A tidak pernah terlihat oleh Sesi B.
 
 Bukti:
-![Q9: Dirty Read]()
+(Lihat bukti/isolation-level.md (bagian Q09))
 
 10. Q10
 -- Sesi A
@@ -362,7 +368,7 @@ Penjelasan penyebab:
 Terjadi Lost Update karena kedua sesi membaca data basi yang sama (1000000.00), menghitung di aplikasi, lalu menulis nilai tetap (925000.00). Update Sesi B menimpa hasil update Sesi A tanpa ada error.
 
 Bukti:
-![Q10: Lost Update]()
+(Lihat bukti/isolation-level.md (bagian Q10-Q13))
 
 11. Q11
 -- Sesi A
@@ -383,7 +389,7 @@ Penjelasan penyebab:
 Pengujian mengonfirmasi bahwa READ COMMITTED rentan terhadap Non-repeatable Read, Phantom Read, dan Lost Update, namun bebas dari Dirty Read.
 
 Bukti:
-![Q11: Ringkasan Anomali]()
+(Lihat bukti/isolation-level.md (bagian Q10-Q13))
 
 12. Q12
 -- Sesi A
@@ -408,7 +414,7 @@ Penjelasan penyebab:
 Lost Update dicegah dengan pembaruan atomik (menghitung langsung di kolom basis data `saldo = saldo - 75000`). PostgreSQL mengambil row-lock saat UPDATE dan mengevaluasi ulang kondisi WHERE terhadap data terbaru yang di-commit.
 
 Bukti:
-![Q12: Atomic Update]()
+(Lihat bukti/isolation-level.md (bagian Q10-Q13))
 
 13. Q13
 -- Sesi A
@@ -435,7 +441,7 @@ Penjelasan penyebab:
 `SELECT ... FOR UPDATE` memasang row lock eksklusif, memaksa Sesi B antre sampai Sesi A selesai. Sesi B kemudian membaca saldo terbaru (925000.00) setelah Sesi A COMMIT, sehingga Lost Update terhindari.
 
 Bukti:
-![Q13: FOR UPDATE]()
+(Lihat bukti/isolation-level.md (bagian Q10-Q13))
 
 14. Q14
 -- Sesi A
@@ -462,8 +468,7 @@ Penjelasan penyebab:
 Kedua sesi membaca versi 1. Sesi A menulis lebih dulu dan menaikkan version_no menjadi 2. UPDATE Sesi B memakai kondisi version_no = 1 sehingga tidak cocok dengan baris mana pun dan hasilnya UPDATE 0. Aplikasi mengetahui data sudah berubah dari jumlah baris yang terpengaruh (0), lalu membaca ulang (saldo 900000, versi 2), menghitung ulang, dan mencoba lagi dengan version_no = 2. Pembaruan Sesi A tidak tertimpa (lost update dicegah) tanpa menahan lock selama pengguna berpikir (optimistic locking).
 
 Bukti:
-![Q14: Sesi A]()
-![Q14: Sesi B]()
+(Lihat bukti/isolation-level.md (bagian Q14))
 
 15. Q15
 -- Sesi A
@@ -498,8 +503,7 @@ Penjelasan penyebab:
 Pada MVCC, UPDATE tidak menimpa baris lama melainkan membuat versi baris baru. Pembaca memakai snapshot dan hanya melihat versi yang sudah di-COMMIT saat snapshot dibuat, sehingga SELECT biasa di Sesi A tidak menunggu transaksi Sesi B (pembaca tidak memblokir penulis, penulis tidak memblokir pembaca). Pada REPEATABLE READ, snapshot dibuat sekali pada pernyataan pertama transaksi, sehingga perubahan B tetap tidak terlihat sampai A selesai. Setelah itu data dipulihkan ke 1000000.00.
 
 Bukti:
-![Q15: Sesi A]()
-![Q15: Sesi B]()
+(Lihat bukti/isolation-level.md (bagian Q15))
 
 16. Q16
 -- Sesi A
@@ -533,8 +537,7 @@ Penjelasan penyebab:
 xmin adalah ID transaksi yang membuat versi baris, dan xmax adalah ID transaksi yang menghapus/meng-update/mengunci versi tersebut. Keduanya adalah metadata sistem PostgreSQL, bukan kolom bisnis. Sesi B masih melihat versi lama dengan xmax terisi nomor transaksi A, padahal baris itu masih valid bagi B karena A belum COMMIT. Setelah ROLLBACK, xmax bisa masih terisi tetapi diabaikan karena transaksi A dibatalkan. Jadi satu nilai xmin/xmax saja tidak cukup untuk menyimpulkan visibilitas, karena harus dilihat juga status COMMIT/ABORT transaksi terkait dan snapshot pembaca.
 
 Bukti:
-![Q16: Sesi A]()
-![Q16: Sesi B]()
+(Lihat bukti/isolation-level.md (bagian Q16))
 
 17. Q17
 -- Sesi A
@@ -564,8 +567,7 @@ Penjelasan penyebab:
 Manfaat MVCC: pembaca dan penulis tidak saling memblokir, dan setiap transaksi mendapat snapshot yang konsisten. Harganya, setiap UPDATE/DELETE meninggalkan versi baris lama (dead tuple) yang masih diperlukan selama ada transaksi lama yang mungkin melihatnya. Setelah tidak ada transaksi yang membutuhkannya, VACUUM menandai ruang itu agar dapat dipakai ulang. Tanpa vacuum, tabel dan indeks membengkak (bloat) dan performa turun. Statistik pg_stat_user_tables diperbarui asinkron sehingga angkanya bisa terlambat beberapa detik.
 
 Bukti:
-![Q17: sebelum dan sesudah UPDATE]()
-![Q17: setelah VACUUM]()
+(Lihat bukti/isolation-level.md (bagian Q17))
 
 18. Q18
 -- Sesi A
@@ -599,7 +601,7 @@ Penjelasan penyebab:
 Semakin kuat mode lock, semakin banyak mode lain yang berkonflik. FOR NO KEY UPDATE dan FOR KEY SHARE dibuat supaya UPDATE biasa pada kolom non-key tidak memblokir transaksi yang hanya perlu menjaga foreign key tetap valid. Hasil demo sesuai tabel: KEY SHARE tidak konflik dengan NO KEY UPDATE, sedangkan SHARE konflik.
 
 Bukti:
-![Q18: demo lock]()
+(Lihat bukti/deadlock.md (bagian Q18))
 
 19. Q19
 -- Sesi A
@@ -625,9 +627,7 @@ Penjelasan penyebab:
 Baris rekening 1 dikunci eksklusif oleh Sesi A sehingga permintaan lock Sesi B masuk antrean. B tidak gagal, hanya menunggu sampai A COMMIT/ROLLBACK melepas lock, lalu mendapat lock dan membaca nilai terbaru.
 
 Bukti:
-![Q19: Sesi A]()
-![Q19: Sesi B menunggu]()
-![Q19: Sesi B setelah A COMMIT]()
+!(Lihat bukti/deadlock.md (bagian Q19))
 
 20. Q20
 -- Sesi A
@@ -657,8 +657,7 @@ Penjelasan penyebab:
 A menunggu lock milik B, dan B menunggu lock milik A, sehingga terbentuk siklus tunggu yang tidak selesai sendiri. Setelah deadlock_timeout (1 detik) PostgreSQL memeriksa siklus dan membatalkan satu transaksi (korban) dengan SQLSTATE 40P01 agar yang lain dapat lanjut. Korban harus ROLLBACK dan transaksinya diulang oleh aplikasi.
 
 Bukti:
-![Q20: Sesi A]()
-![Q20: Sesi B]()
+(Lihat bukti/deadlock.md (bagian Q20))
 (teks error juga disalin ke bukti/deadlock.md)
 
 21. Q21
@@ -687,8 +686,7 @@ Penjelasan penyebab:
 Karena semua sesi mengunci dari ID terkecil ke terbesar, sesi yang kalah berebut rekening 1 menunggu tanpa memegang lock lain, sehingga tidak ada siklus tunggu. Deadlock dapat dihindari pada skenario ini. Aturan ini hanya efektif jika semua kode aplikasi memakai urutan yang sama.
 
 Bukti:
-![Q21: Sesi A]()
-![Q21: Sesi B]()
+(Lihat bukti/deadlock.md (bagian Q21))
 
 22. Q22
 -- Sesi A
@@ -719,8 +717,7 @@ Penjelasan penyebab:
 Antrean lock panjang (lock wait) adalah keterlambatan temporal di mana Sesi B menunggu Sesi A melepaskan row lock. Ketergantungan ini bersifat satu arah (A memblokir B) dan akan selesai secara otomatis begitu Sesi A COMMIT atau ROLLBACK. Berbeda dengan deadlock yang merupakan ketergantungan melingkar (A memblokir B dan B memblokir A) sehingga PostgreSQL harus membatalkan salah satu transaksi dengan SQLSTATE 40P01.
 
 Bukti:
-![Q22: Sesi A menahan lock]()
-![Q22: Sesi B mengalami lock wait]()
+(Lihat bukti/deadlock.md (bagian Q22))
 
 23. Q23
 -- Sesi A
@@ -750,7 +747,7 @@ Fungsi masing-masing parameter timeout:
 - deadlock_timeout: Batas waktu tunggu sebelum PostgreSQL mengaktifkan pemeriksaan siklus deadlock (deadlock detector).
 
 Bukti:
-![Q23: Pemeriksaan parameter timeout]()
+(Lihat bukti/deadlock.md (bagian Q23))
 
 24. Q24
 -- Setup Tabel Antrean
@@ -788,8 +785,8 @@ Penjelasan penyebab:
 Klausul SKIP LOCKED memerintahkan mesin database untuk mengabaikan baris-baris yang sedang dikunci oleh transaksi lain dan langsung mengambil baris berikutnya yang belum terkunci. Fitur ini sangat berguna untuk arsitektur worker antrean (task queue) paralel agar banyak worker dapat mengambil pekerjaan secara bersamaan tanpa saling terhalang (non-blocking).
 
 Bukti:
-![Q24: Sesi A mengunci baris 1]()
-![Q24: Sesi B menggunakan SKIP LOCKED]()
+(Lihat bukti/deadlock.md (bagian Q24))
+
 25. Q25
 -- Sesi A
 BEGIN;
@@ -814,8 +811,7 @@ Penjelasan penyebab:
 Klausul NOWAIT menginstruksikan PostgreSQL untuk langsung membatalkan perintah jika baris sasaran sedang dikunci oleh transaksi lain, alih-alih masuk ke antrean tunggu (lock wait). Fitur ini digunakan ketika aplikasi membutuhkan kepastian eksekusi instan dan tidak boleh terhenti oleh blocking.
 
 Bukti:
-![Q25: Sesi A FOR UPDATE]()
-![Q25: Sesi B FOR UPDATE NOWAIT error]()
+(Lihat bukti/deadlock.md (bagian Q25))
 
 26. Q26
 -- Setup Tabel Dokter Jaga
@@ -858,7 +854,7 @@ Penjelasan penyebab:
 Terjadi anomali Write Skew. Pada isolation level REPEATABLE READ, kedua transaksi membaca snapshot data yang sama (menunjukkan 2 dokter aktif). Karena Sesi A mengubah baris id = 1 dan Sesi B mengubah baris id = 2, tidak terjadi konflik row lock langsung. Kedua transaksi diizinkan COMMIT, sehingga aturan bisnis "minimal 1 dokter aktif" terlanggar.
 
 Bukti:
-![Q26: Sesi A dan Sesi B Write Skew]()
+(Lihat bukti/serializable.md (bagian Q26))
 
 27. Q27
 -- Sesi A
@@ -892,8 +888,7 @@ Penjelasan penyebab:
 Isolation level SERIALIZABLE menggunakan Serializable Snapshot Isolation (SSI) untuk melacak dependensi read/write antar-transaksi secara bersamaan. Saat Sesi A COMMIT dan Sesi B mencoba mengubah data yang saling bergantung pada pembacaan sebelumnya, PostgreSQL mendeteksi potensi anomali Write Skew dan menggagalkan Sesi B dengan SQLSTATE 40001 agar konsistensi data tetap terjaga.
 
 Bukti:
-![Q27: Sesi A COMMIT]()
-![Q27: Sesi B Serialization Error]()
+(Lihat bukti/serializable.md (bagian Q27))
 
 28. Q28
 -- Sesi A
@@ -921,7 +916,7 @@ Penjelasan penyebab:
 Dalam memeriksa serialisasi, PostgreSQL memasang SIReadLock (Snapshot Isolation Read Lock) in-memory pada tingkat tuple, halaman, atau tabel saat SELECT dijalankan. SIReadLock hanya berfungsi sebagai penanda/pencatat (ephemeral lock marker) untuk melacak konflik read-write dependencies secara deklaratif. Oleh karena itu, SELECT pada level SERIALIZABLE tidak memblokir transaksi lain seperti SELECT ... FOR UPDATE (pembaca tidak memblokir penulis dan penulis tidak memblokir pembaca).
 
 Bukti:
-![Q28: SIReadLock non-blocking demonstration]()
+(Lihat bukti/serializable.md (bagian Q28))
 
 29. Q29
 -- Pseudocode Strategi Retry Transaksi (Python Concept)
@@ -967,7 +962,7 @@ Error 40001 dan 40P01 bukan merupakan bug aplikasi, melainkan mekanisme normal d
 Operasi eksternal (seperti pengiriman email atau call API payment) WAJIB dijalankan setelah COMMIT berhasil. Jika dijalankan di dalam transaksi, retry akan menyebabkan email terkirim ganda (duplicate execution) padahal transaksi database sebelumnya mengalami ROLLBACK.
 
 Bukti:
-![Q29: Diagram alir retry logic]()
+(Pseudocode dan penjelasan ada dalam bukti/serializable.md (bagian Q29))
 
 ## Tabel Ringkasan Anomali (Q11 dan Q30)
 Anomali | Cara reproduksi | Isolation Level | Hasil yang diamati | Penyebab | Dampak | Mitigasi 

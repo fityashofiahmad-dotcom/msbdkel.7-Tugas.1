@@ -9,7 +9,30 @@ Fitya Shofi Ahmad    | 251402132 | Langkah 1, Langkah 6                         
 Mar'ie Rizqullah     | 251402129 | Langkah 4 (Q22 - Q29), Langkah 5             | Commit 
 
 ## Struktur Folder
-...
+latihan/p09/
+├── README.md
+├── laporan.md
+├── q00_setup.sql
+├── q01.sql
+├── q02.sql
+├── ...                              (q03.sql sampai q21.sql)
+├── q22_deadlock_vs_lock_queue.sql
+├── q23_timeout_parameters.sql
+├── q24_skip_locked.sql
+├── q25_nowait.sql
+├── q26_write_skew.sql
+├── q27_serializable.sql
+├── q28_sireadlock_concept.sql
+├── q29_retry_strategy.sql
+└── bukti/
+    ├── isolation-level.md
+    ├── deadlock.md
+    ├── serializable.md
+    ├── hasil-sesi.txt
+    └── images/
+        ├── q01-SesiA-1.png
+        ├── q01-SesiA-2.png
+        └── ...
 
 ## Cara Menjalankan
 1. Jalankan q00_setup.sql untuk membuat skema lab9, tabel rekening, dan data awal.

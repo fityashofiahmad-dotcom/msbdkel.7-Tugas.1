@@ -8,6 +8,14 @@ Fahri Arizal         | 251402102 | Langkah 2 (Q6 - Q11), Langkah 3 (Q12 - Q13)  
 Fitya Shofi Ahmad    | 251402132 | Langkah 1, Langkah 6                         | Commit 
 Mar'ie Rizqullah     | 251402129 | Langkah 4 (Q22 - Q29), Langkah 5             | Commit 
 
+## Lingkungan Eksperimen
+Item                | Isi
+--------------------+-----------------------------------------------------------
+Versi PostgreSQL    | (hasil SELECT version();)
+Alat yang digunakan | Docker compose, DBeaver, dua SQL dengan koneksi berbeda 
+Mode commit         | Manual
+Skema               | Lab9
+
 ## Konfigurasi relevan (hasil perintah SHOW)
 Parameter                           | Nilai 
 ------------------------------------+-----------------

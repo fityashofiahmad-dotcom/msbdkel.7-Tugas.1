@@ -10,8 +10,8 @@ Mar'ie Rizqullah     | 251402129 | Langkah 4 (Q22 - Q29), Langkah 5             
 
 ## Lingkungan Eksperimen
 Item                | Isi
---------------------+-----------------------------------------------------------
-Versi PostgreSQL    | (hasil SELECT version();)
+--------------------+-------------------------------------------------------------------------------------------------------------
+Versi PostgreSQL    | PostgreSQL 17.11 (Debian 17.11-1.pgdg13+2) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
 Alat yang digunakan | Docker compose, DBeaver, dua SQL dengan koneksi berbeda 
 Mode commit         | Manual
 Skema               | Lab9

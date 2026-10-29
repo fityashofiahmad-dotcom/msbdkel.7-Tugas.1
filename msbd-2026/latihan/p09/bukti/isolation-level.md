@@ -71,4 +71,35 @@
 - **Q12**: Pembaruan atomik `saldo = saldo - 75000` berhasil menjaga konsistensi saldo akhir `850000.00`.
 - **Q13**: `SELECT ... FOR UPDATE` memaksa Sesi B menunggu hingga Sesi A `COMMIT`, menghasilkan saldo akhir `850000.00`.
 
+## Q14: Optimistic Locking (version_no)
+- T1 (Sesi A): `SELECT saldo, version_no FROM lab9.rekening_v WHERE rekening_id = 1;` -> `1000000.00, 1`
+- T2 (Sesi B): `SELECT saldo, version_no FROM lab9.rekening_v WHERE rekening_id = 1;` -> `1000000.00, 1`
+- T3 (Sesi A): `UPDATE lab9.rekening_v SET saldo = 900000, version_no = version_no + 1 WHERE rekening_id = 1 AND version_no = 1;` -> `UPDATE 1`
+- T4 (Sesi B): `UPDATE lab9.rekening_v SET saldo = 950000, version_no = version_no + 1 WHERE rekening_id = 1 AND version_no = 1;` -> `UPDATE 0`
+*Hasil*: Saldo akhir `900000.00`, `version_no = 2`. Sesi B tidak menimpa data (0 baris terpengaruh), lalu harus membaca ulang dan mencoba lagi dengan `version_no = 2`. Auto-commit, tanpa error (SQLSTATE -).
 
+## Q15: MVCC, Pembaca Tidak Memblokir Penulis
+- T1 (Sesi A): `BEGIN ISOLATION LEVEL REPEATABLE READ; SELECT saldo FROM lab9.rekening WHERE rekening_id = 1;` -> `1000000.00`
+- T2 (Sesi B): `BEGIN; UPDATE lab9.rekening SET saldo = saldo - 50000 WHERE rekening_id = 1;` (belum COMMIT)
+- T3 (Sesi A): `SELECT saldo FROM lab9.rekening WHERE rekening_id = 1;` -> `1000000.00` (tidak menunggu)
+- T4 (Sesi B): `COMMIT;`
+- T5 (Sesi A): `SELECT saldo FROM lab9.rekening WHERE rekening_id = 1;` -> `1000000.00` (tidak menunggu)
+- T6 (Sesi A): `COMMIT;` lalu `SELECT saldo FROM lab9.rekening WHERE rekening_id = 1;` -> `950000.00`
+*Hasil*: SELECT biasa tidak pernah menunggu. Snapshot REPEATABLE READ dibuat sekali, jadi perubahan B baru terlihat setelah A COMMIT.
+
+## Q16: xmin, xmax, ctid
+- T1 (Sesi A): `SELECT xmin, xmax, ctid, rekening_id, saldo FROM lab9.rekening WHERE rekening_id = 1;` -> `xmin=<ISI>, xmax=0, ctid=<ISI>, saldo=1000000.00`
+- T2 (Sesi A): `BEGIN; SELECT pg_current_xact_id();` -> `<X_A>`
+- T3 (Sesi A): `UPDATE lab9.rekening SET saldo = saldo - 1000 WHERE rekening_id = 1;` lalu `SELECT xmin, xmax, ctid, rekening_id, saldo FROM lab9.rekening WHERE rekening_id = 1;` -> `xmin=<X_A>, xmax=0, ctid=<ISI>, saldo=999000.00`
+- T4 (Sesi B): `SELECT xmin, xmax, ctid, rekening_id, saldo FROM lab9.rekening WHERE rekening_id = 1;`(A belum COMMIT) -> `xmin=<ISI>, xmax=<X_A>, ctid=<ISI>, saldo=1000000.00`
+- T5 (Sesi A): `ROLLBACK;`
+- T6 (Sesi B): `SELECT xmin, xmax, ctid, rekening_id, saldo FROM lab9.rekening WHERE rekening_id = 1;` -> `xmin=<ISI>, xmax=<ISI, kemungkinan masih X_A>, ctid=<ISI>, saldo=1000000.00`
+*Hasil*: `xmin` = ID transaksi pembuat versi baris, `xmax` = ID transaksi yang meng-update/menghapus/mengunci. Setelah ROLLBACK, `xmax` bisa masih terisi tetapi diabaikan karena transaksi A dibatalkan.
+
+## Q17: Dead Tuple dan VACUUM
+- T1 (Sesi A): `SELECT relname, n_live_tup, n_dead_tup FROM pg_stat_user_tables WHERE schemaname = 'lab9' AND relname = 'rekening';` -> `2, <ISI>`
+- T2 (Sesi A): `UPDATE lab9.rekening SET saldo = saldo WHERE rekening_id = 1;` (diulang 10 kali)
+- T3 (Sesi A): `SELECT relname, n_live_tup, n_dead_tup FROM pg_stat_user_tables WHERE schemaname = 'lab9' AND relname = 'rekening';` -> `n_live_tup=2, n_dead_tup=<ISI>`
+- T4 (Sesi A): `VACUUM (VERBOSE) lab9.rekening;` -> `<ISI: salin baris "removed ... dead row versions">`
+- T5 (Sesi A): `SELECT relname, n_live_tup, n_dead_tup FROM pg_stat_user_tables WHERE schemaname = 'lab9' AND relname = 'rekening';` -> `n_live_tup=2, n_dead_tup=0`
+*Hasil*: Setiap UPDATE meninggalkan dead tuple, VACUUM menandai ruangnya agar dipakai ulang. VACUUM tidak boleh di dalam blok transaksi.

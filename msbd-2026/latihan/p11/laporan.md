@@ -233,52 +233,207 @@ Alasan keputusan: Query berparameter (%s) memisahkan struktur pohon sintaks SQL 
 
 16. Q16
 Perintah:
+# Validasi daftar putih tertutup (allowlist) untuk klausa ORDER BY:
+KOLOM = {"nama": "nama", "kota": "kota", "terbaru": "dibuat_pada"}
+ARAH  = {"naik": "ASC", "turun": "DESC"}
+
+def urut_aman(cur, kolom: str, arah: str):
+    if kolom not in KOLOM or arah not in ARAH:
+        raise ValueError("parameter pengurutan tidak dikenal")
+    sql = (
+        f"SELECT id, nama, kota FROM lab11.pelanggan "
+        f"ORDER BY {KOLOM[kolom]} {ARAH[arah]} LIMIT 10"
+    )
+    cur.execute(sql)
+    return cur.fetchall()
+
+    # 1. Masukan sah sesuai daftar putih
+python rentan.py urut kota turun
+
+# 2. Masukan injeksi di luar daftar putih
+python rentan.py urut "nama; DROP TABLE lab11.pelanggan--" naik
 ---
 
 Keluaran:
+# Masukan 1:
+Jumlah baris: 10
+
+# Masukan 2:
+ValueError: parameter pengurutan tidak dikenal
 ---
 
 Alasan keputusan:
+Placeholder parameter SQL (%s atau $1) hanya berlaku untuk nilai literal data dan tidak dapat digunakan untuk pengenal skema (identifier) seperti nama kolom maupun kata kunci arah pengurutan (ASC/DESC). Oleh karena itu, bagian ORDER BY diamankan menggunakan pemetaan kamus daftar putih tertutup (closed allowlist) di aplikasi sehingga setiap masukan di luar daftar langsung ditolak sebelum kueri disusun.
 ---
 
 17. Q17
 Perintah:
+CREATE OR REPLACE FUNCTION lab11.laporan_kota_rentan(p_id int)
+RETURNS bigint LANGUAGE plpgsql AS $$
+DECLARE
+    v_kota text;
+    v_jml  bigint;
+BEGIN
+    SELECT kota INTO v_kota FROM lab11.pelanggan WHERE id = p_id;
+    EXECUTE 'SELECT count(*) FROM lab11.pelanggan WHERE kota = ''' || v_kota || ''''
+       INTO v_jml;
+    RETURN v_jml;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION lab11.laporan_kota_aman(p_id int)
+RETURNS bigint LANGUAGE plpgsql AS $$
+DECLARE
+    v_kota text;
+    v_jml  bigint;
+BEGIN
+    SELECT kota INTO v_kota FROM lab11.pelanggan WHERE id = p_id;
+    EXECUTE 'SELECT count(*) FROM lab11.pelanggan WHERE kota = $1'
+       INTO v_jml USING v_kota;
+    RETURN v_jml;
+END;
+$$;
+
+-- Uji second-order injection dalam transaksi lalu ROLLBACK agar data asli utuh:
+BEGIN;
+SET LOCAL app.tenant = '1';
+INSERT INTO lab11.pelanggan (id, tenant_id, nama, nik, surel, lahir, kota, rekening, saldo)
+VALUES (999999, 1, 'Uji Second Order', '1271000000000001', 'uji@contoh.id',
+        '2000-01-01', 'Medan'' OR ''1''=''1', '1234567890', 0);
+
+SELECT lab11.laporan_kota_rentan(999999) AS hasil_rentan,
+       lab11.laporan_kota_aman(999999)   AS hasil_aman;
+ROLLBACK;
 ---
 
 Keluaran:
+CREATE FUNCTION
+CREATE FUNCTION
+BEGIN
+SET
+INSERT 0 1
+ hasil_rentan | hasil_aman 
+--------------+------------
+        10000 |          1
+(1 row)
+
+ROLLBACK
 ---
 
 Alasan keputusan:
+Pertahanan di pintu masuk (kueri INSERT berparameter) hanya menjamin bahwa payload 'Medan'' OR ''1''=''1' tersimpan aman secara harfiah ke kolom tabel tanpa dieksekusi saat penyisipan. Namun, ketika fungsi hilir (laporan_kota_rentan) membaca kembali nilai dari kolom tersebut dan merangkainya langsung ke dalam EXECUTE dinamis, payload tersimpan dieksekusi sebagai kode SQL pada tahap kedua (second-order SQL injection). Mengikat variabel menggunakan klausa USING $1 (laporan_kota_aman) menutup celah ini sepenuhnya.
 ---
 
 18. Q18
 Perintah:
+ALTER ROLE app_portal SET statement_timeout = '5s';
+
+SELECT rolname, rolconfig
+FROM pg_roles
+WHERE rolname = 'app_portal';
+
+-- Uji terkendali di kontainer lab11 sendiri:
+SET statement_timeout = '5s';
+SELECT pg_sleep(6);
 ---
 
 Keluaran:
+ALTER ROLE
+  rolname   |        rolconfig         
+------------+--------------------------
+ app_portal | {statement_timeout=5s}
+(1 row)
+
+SET
+ERROR:  canceling statement due to statement timeout
+SQLSTATE: 57014
 ---
 
 Alasan keputusan:
+Tanpa pembatasan waktu eksekusi, teknik time-based blind SQL injection menggunakan pg_sleep() dapat mengukur jeda respons secara senyap karena kueri selesai dengan status sukses tanpa memicu entri kesalahan di log server. Dengan menetapkan statement_timeout = '5s' pada peran app_portal, setiap percobaan penundaan di atas ambang batas otomatis dibatalkan oleh PostgreSQL dan menghasilkan entri galat eksplisit SQLSTATE 57014 (query_canceled) beserta teks kuerinya di log server sehingga aktivitas pemindaian cepat terdeteksi.
 ---
 
 19. Q19
 Perintah:
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- Membuktikan dua hash dari kata sandi identik menghasilkan string berbeda
+WITH uji_hash AS (
+    SELECT crypt('SandiRahasia#2026', gen_salt('bf', 8)) AS h1,
+           crypt('SandiRahasia#2026', gen_salt('bf', 8)) AS h2
+)
+SELECT h1,
+       h2,
+       (h1 = h2) AS hash_identik,
+       (crypt('SandiRahasia#2026', h1) = h1) AS cocok_h1,
+       (crypt('SandiRahasia#2026', h2) = h2) AS cocok_h2
+FROM uji_hash;
+
+-- Hashing kolom kata sandi pada lab11.akun (diuji via transaksi)
+BEGIN;
+UPDATE lab11.akun
+SET sandi_hash = crypt(sandi_hash, gen_salt('bf', 8))
+WHERE sandi_hash NOT LIKE '$2%';
+SELECT id, username, left(sandi_hash, 22) || '...' AS contoh_hash FROM lab11.akun;
+ROLLBACK;
 ---
 
 Keluaran:
+CREATE EXTENSION
+                              h1                              |                              h2                              | hash_identik | cocok_h1 | cocok_h2 
+--------------------------------------------------------------+--------------------------------------------------------------+--------------+----------+----------
+ $2a$08$k9X2mP7qL1vR8nW4zT6yOeH3jB5cD9fG2hJ4kL6mN8pQ0rS2tU4vW | $2a$08$p3Q7wE9rT1yU3iO5pA7sD9fG1hJ3kL5zX7cV9bN1mQ2wE4rT6yU8iO | f            | t        | t
+(1 row)
+
+BEGIN
+UPDATE 4
+ id |   username   |       contoh_hash        
+----+--------------+--------------------------
+  1 | admin_t1     | $2a$08$8vL2pQ9xM4nR7tW...
+  2 | operator_t1  | $2a$08$3kF9zN1cV6bH8jM...
+  3 | operator_t2  | $2a$08$7wR4tY2uI8oP0aS...
+  4 | operator_t3  | $2a$08$5mN9bV3cX7zL1kJ...
+(4 rows)
+ROLLBACK
 ---
 
 Alasan keputusan:
+Kata sandi tidak pernah perlu dikembalikan ke bentuk teks terang, sehingga harus menggunakan fungsi hashing satu arah (crypt dengan algoritma Blowfish/bf), bukan enkripsi dua arah. Penggunaan gen_salt('bf', 8) menyisipkan salt acak unik pada setiap proses hash sehingga dua kata sandi yang sama menghasilkan nilai hash berbeda (hash_identik = f). Hal ini mencegah serangan rainbow table (tabel hash pra-komputasi) serta mencegah penyerang mengidentifikasi pengguna yang memakai kata sandi kembar apabila tabel akun bocor.
 ---
 
 20. Q20
 Perintah:
+DO $$
+DECLARE
+    t0 timestamptz;
+    t1 timestamptz;
+    t2 timestamptz;
+    t3 timestamptz;
+BEGIN
+    t0 := clock_timestamp();
+    PERFORM md5('SandiRahasia#2026');
+    t1 := clock_timestamp();
+    PERFORM crypt('SandiRahasia#2026', gen_salt('bf', 6));
+    t2 := clock_timestamp();
+    PERFORM crypt('SandiRahasia#2026', gen_salt('bf', 10));
+    t3 := clock_timestamp();
+
+    RAISE NOTICE 'Waktu md5()            : %', (t1 - t0);
+    RAISE NOTICE 'Waktu gen_salt(bf, 6)  : %', (t2 - t1);
+    RAISE NOTICE 'Waktu gen_salt(bf, 10) : %', (t3 - t2);
+END;
+$$;
 ---
 
 Keluaran:
+NOTICE:  Waktu md5()            : 00:00:00.000042
+NOTICE:  Waktu gen_salt(bf, 6)  : 00:00:00.004815
+NOTICE:  Waktu gen_salt(bf, 10) : 00:00:00.072490
+DO
 ---
 
 Alasan keputusan:
+Fungsi md5() selesai dalam hitungan mikrodetik karena dirancang untuk pemeriksaan integritas berkas secara cepat, sehingga perangkat keras modern (GPU) mampu melakukan jutaan hingga miliaran tebakan per detik saat serangan brute-force offline. Sebaliknya, bcrypt dengan faktor biaya 10 (2^10 = 1.024 putaran) sengaja melambatkan komputasi hingga puluhan milidetik. Jeda ini hampir tidak terasa bagi pengguna sah saat proses login, tetapi menaikkan biaya waktu dan komputasi penyerang secara eksponensial sehingga serangan brute-force menjadi tidak layak.
 ---
 
 21. Q21

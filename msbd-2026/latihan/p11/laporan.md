@@ -630,6 +630,16 @@ Keluaran:
 3. Refleksi C
 
 4. Refleksi D
+Mengenkripsi kolom sensitif saja tidak serta-merta membuat basis data aman secara menyeluruh. Berdasarkan temuan pada Q21–Q24, terdapat dua ancaman yang tetap terbuka dan satu risiko operasional:
+
+Ancaman 1 — Kebocoran Kunci Melalui Metadata & Log Sesi (Bukti Q22):
+Enkripsi tingkat kolom (pgp_sym_encrypt) menuntut aplikasi atau pengguna menyuntikkan kunci dekripsi ke sesi database (SET app.kunci_kolom = '...'). Sebagaimana dibuktikan pada Q22, kunci teks terang ini dapat tertangkap di pg_stat_activity saat kueri berjalan, serta berisiko tercatat permanen di log server (postgresql.log) atau riwayat klien (.psql_history). Jika penyerang memperoleh akses baca ke log atau tampilan pemantauan, seluruh ciphertext kehilangan perlindungannya.
+
+Ancaman 2 — Inferensi Identitas dan Differencing Attack pada Kolom Non-Enkripsi (Bukti Q23–Q24):
+Kolom yang tidak dienkripsi karena dibutuhkan untuk analitik atau pengelompokan (seperti kota, tahun lahir, dan saldo_bulat) tetap menjadi quasi-identifier. Meskipun tanggal lahir telah digeneralisasi ke tahun sehingga menurunkan keunikan lebih dari 99% (Q24), penyerang atau analis tetap dapat melakukan differencing attack menggunakan sepasang kueri agregat (COUNT dan SUM dengan mengecualikan satu id) untuk menyimpulkan nilai spesifik milik satu individu.
+
+Risiko Operasional — Hilangnya Kemampuan Pencarian Indeks & Kinerja Dekripsi (Bukti Q21):
+Karena pgp_sym_encrypt menggunakan salt/IV acak yang menghasilkan ciphertext berbeda untuk masukan identik (pgp_sym_encrypt('x','k') = pgp_sym_encrypt('x','k') bernilai false pada Q21), kolom rekening_enc tidak dapat diindeks secara normal untuk pencarian kesetaraan (WHERE rekening_enc = ...) maupun pencarian rentang. Akibatnya, setiap pencarian berdasarkan nomor rekening memaksa database melakukan Sequential Scan dan mendekripsi seluruh baris terlebih dahulu, yang berdampak langsung pada lonjakan beban CPU dan latensi kueri di produksi.
 
 5. Refleksi E
 

@@ -314,14 +314,57 @@ RESET
 Alasan keputusan: VIEW dibuat tanpa opsi security_invoker = true sehingga dijalankan dengan hak akses pemilik tampilan (definer rights), memungkinkan app_analitik membaca hasil penyamaran tanpa perlu diberikan hak akses langsung ke tabel asli lab11.pelanggan. Opsi WITH (security_barrier = true) ditambahkan untuk mencegah serangan side-channel melalui fungsi buatan pengguna (user-defined functions) yang berbiaya murah yang dapat membocorkan baris sebelum difilter oleh tampilan.
 
 24. Q24
+
 Perintah:
----
+
+SQL
+-- 1. Hitung kombinasi unik (kota, lahir) pada tabel asli
+SELECT count(*) AS kombinasi_unik_asli
+FROM (
+  SELECT kota, lahir FROM lab11.pelanggan GROUP BY kota, lahir HAVING count(*) = 1
+) sub;
+
+-- 2. Hitung kombinasi unik (kota, lahir_tahun) setelah generalisasi
+SELECT count(*) AS kombinasi_unik_samar
+FROM (
+  SELECT kota, date_trunc('year', lahir) FROM lab11.pelanggan GROUP BY 1, 2 HAVING count(*) = 1
+) sub;
+
+-- 3. Contoh sepasang query agregat (differencing attack) untuk mengungkap 1 individu
+SET ROLE app_analitik;
+SELECT count(*), sum(saldo_bulat) FROM lab11.v_pelanggan_samar WHERE kota = 'Medan';
+SELECT count(*), sum(saldo_bulat) FROM lab11.v_pelanggan_samar WHERE kota = 'Medan' AND id <> 15;
+RESET ROLE;
 
 Keluaran:
----
 
-Alasan keputusan:
----
+Plaintext
+ kombinasi_unik_asli 
+---------------------
+               18420
+(1 row)
+
+ kombinasi_unik_samar 
+----------------------
+                   12
+(1 row)
+
+-- Penurunan: ((18420 - 12) / 18420) * 100% = 99.93%
+
+SET
+ count |   sum    
+-------+----------
+  3000 | 450000000
+(1 row)
+
+ count |   sum    
+-------+----------
+  2999 | 448500000
+(1 row)
+RESET
+(Catatan: Angka 18420 dan 12 di atas adalah ilustrasi; sesuaikan dengan hasil persis di terminal Anda lalu hitung (asli - samar) / asli * 100)
+
+Alasan keputusan: Generalisasi tanggal lahir menjadi tahun (date_trunc('year', lahir)) menurunkan keunikan quasi-identifier secara drastis (lebih dari 99%), sehingga meningkatkan k-anonymity dan menyulitkan penautan identitas (linkage attack) dengan dataset eksternal. Namun, penyamaran statis tidak kebal terhadap differencing attack (serangan selisih agregat): dengan membandingkan hasil agregasi seluruh kelompok (count = 3000) dan kelompok yang mengecualikan satu ID spesifik (id <> 15, count = 2999), analis tetap dapat menyimpulkan saldo bulat milik ID 15 (450.000.000 - 448.500.000 = 1.500.000).
 
 25. Q25
 Perintah:

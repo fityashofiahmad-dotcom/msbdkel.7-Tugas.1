@@ -9,7 +9,15 @@ Mar'ie rizqullah   | 251402129 | Q21-Q30, Refleksi D, Refleksi E, laporan.md    
 ## Q1-Q30
 1. Q01
 Perintah:
----
+-- Diminta: membuktikan bahwa hak yang melekat pada kepemilikan tidak bisa dicabut dengan REVOKE.
+-- Dipilih: REVOKE UPDATE dari pemilik, uji, lalu GRANT ulang oleh pemilik sendiri dan uji lagi.
+-- Alternatif: mengganti pemilik tabel (ALTER ... OWNER TO); tidak dipilih karena bukan yang diuji.
+REVOKE UPDATE ON lab11.pelanggan FROM skema_owner;
+SET ROLE skema_owner;
+BEGIN; UPDATE lab11.pelanggan SET kota = kota WHERE id = 3; ROLLBACK;   -- ditolak?
+GRANT UPDATE ON lab11.pelanggan TO skema_owner;                          -- oleh pemilik sendiri
+BEGIN; UPDATE lab11.pelanggan SET kota = kota WHERE id = 3; ROLLBACK;   -- berhasil?
+RESET ROLE;
 
 Keluaran:
 ---
@@ -19,7 +27,12 @@ Alasan keputusan:
 
 2. Q02
 Perintah:
----
+-- Diminta: menjalankan REVOKE DROP dan menjelaskan hak biasa vs hak yang melekat pada kepemilikan.
+-- Dipilih: jalankan apa adanya, lalu buktikan DROP hanya bisa oleh pemilik (transaksi di-rollback).
+-- Alternatif: DROP sungguhan sebagai pemilik; tidak dipilih karena merusak data lab.
+REVOKE DROP ON lab11.akun FROM skema_owner;
+SELECT tablename, tableowner FROM pg_tables WHERE schemaname = 'lab11' AND tablename = 'akun';
+BEGIN; SET LOCAL ROLE app_laporan; DROP TABLE lab11.akun; ROLLBACK;
 
 Keluaran:
 ---
@@ -29,7 +42,30 @@ Alasan keputusan:
 
 3. Q03
 Perintah:
----
+-- Diminta: tabel buatan postgres (bukan skema_owner) dan apakah app_laporan bisa membacanya.
+-- Dipilih: ALTER DEFAULT PRIVILEGES untuk peran pembuat objek (postgres), lalu dibersihkan lagi.
+-- Alternatif: GRANT manual per tabel; tidak dipilih karena mudah terlupa pada tabel baru.
+
+-- pembanding: tabel buatan skema_owner (default privileges dari setup berlaku)
+SET ROLE skema_owner;
+CREATE TABLE lab11.catatan_owner (id int);
+SELECT has_table_privilege('app_laporan','lab11.catatan_owner','SELECT') AS via_skema_owner;   -- t
+DROP TABLE lab11.catatan_owner;
+RESET ROLE;
+
+-- kasus soal: tabel buatan postgres
+CREATE TABLE lab11.catatan_postgres (id int);
+SELECT has_table_privilege('app_laporan','lab11.catatan_postgres','SELECT') AS via_postgres;   -- f
+DROP TABLE lab11.catatan_postgres;
+
+-- perbaikan: default privileges untuk peran pembuat (postgres)
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA lab11 GRANT SELECT ON TABLES TO app_read;
+CREATE TABLE lab11.catatan_postgres (id int);
+SELECT has_table_privilege('app_laporan','lab11.catatan_postgres','SELECT') AS setelah_perbaikan;   -- t
+DROP TABLE lab11.catatan_postgres;
+
+-- pembersihan: kembalikan kondisi awal
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA lab11 REVOKE SELECT ON TABLES FROM app_read;
 
 Keluaran:
 ---
@@ -39,7 +75,17 @@ Alasan keputusan:
 
 4. Q04
 Perintah:
----
+-- Diminta: GRANT OPTION berantai ke app_analitik, lalu REVOKE tanpa dan dengan CASCADE.
+-- Dipilih: REVOKE GRANT OPTION FOR, supaya hak baca app_write tetap ada.
+-- Alternatif: REVOKE SELECT penuh dari app_write; tidak dipilih karena ikut mencabut hak bacanya.
+GRANT SELECT ON lab11.transaksi TO app_write WITH GRANT OPTION;
+SET ROLE app_write;
+GRANT SELECT ON lab11.transaksi TO app_analitik;
+RESET ROLE;
+REVOKE GRANT OPTION FOR SELECT ON lab11.transaksi FROM app_write;            -- amati galatnya
+REVOKE GRANT OPTION FOR SELECT ON lab11.transaksi FROM app_write CASCADE;    -- lalu bandingkan
+SELECT has_table_privilege('app_analitik','lab11.transaksi','SELECT') AS analitik,
+       has_table_privilege('app_write','lab11.transaksi','SELECT')    AS app_write;
 
 Keluaran:
 ---
@@ -49,7 +95,22 @@ Alasan keputusan:
 
 5. Q05
 Perintah:
----
+-- Diminta: tabel tujuh peran pada lab11, kemampuan masing-masing, dan tanda yang bisa login.
+-- Dipilih: diambil dari katalog sistem (pg_roles, hak tabel), bukan ditulis dari ingatan.
+-- Alternatif: menyalin dari dokumentasi modul; tidak dipilih karena bisa berbeda dari kondisi nyata.
+SELECT r.rolname, r.rolcanlogin AS bisa_login, r.rolsuper, r.rolbypassrls,
+       (SELECT string_agg(g.rolname, ', ') FROM pg_auth_members m
+          JOIN pg_roles g ON g.oid = m.roleid WHERE m.member = r.oid) AS anggota_dari
+FROM pg_roles r
+WHERE r.rolname = 'skema_owner' OR r.rolname LIKE 'app\_%'
+ORDER BY 1;
+
+SELECT grantee, table_name, string_agg(privilege_type, ', ' ORDER BY privilege_type) AS hak
+FROM information_schema.role_table_grants
+WHERE table_schema = 'lab11' AND grantee <> 'skema_owner'
+GROUP BY 1, 2 ORDER BY 1, 2;
+
+SELECT tablename, tableowner FROM pg_tables WHERE schemaname = 'lab11' ORDER BY 1;
 
 Keluaran:
 ---
@@ -59,7 +120,13 @@ Alasan keputusan:
 
 6. Q06
 Perintah:
----
+-- Diminta: nyalakan RLS pada pelanggan, lalu hitung baris yang terlihat app_laporan sebelum ada kebijakan.
+-- Dipilih: ENABLE ROW LEVEL SECURITY lalu uji negatif sebagai app_laporan di dalam transaksi.
+-- Alternatif: penyaring tenant_id di aplikasi; tidak dipilih karena gagalnya membocorkan, bukan menolak.
+ALTER TABLE lab11.pelanggan ENABLE ROW LEVEL SECURITY;
+BEGIN; SET LOCAL ROLE app_laporan;
+  SELECT count(*) AS sebelum_ada_kebijakan FROM lab11.pelanggan;   -- harapkan 0
+COMMIT;
 
 Keluaran:
 ---
@@ -69,7 +136,23 @@ Alasan keputusan:
 
 7. Q07
 Perintah:
----
+-- Diminta: sepasang kebijakan isolasi penyewa memakai nullif(current_setting('app.tenant', true), '')::int.
+-- Dipilih: satu kebijakan baca (app_read, app_write) dan satu kebijakan FOR ALL dengan WITH CHECK (app_write).
+-- Alternatif: current_setting(...)::int langsung; tidak dipilih karena melempar galat pada koneksi yang dipakai ulang.
+DROP POLICY IF EXISTS p_tenant_baca  ON lab11.pelanggan;
+DROP POLICY IF EXISTS p_tenant_tulis ON lab11.pelanggan;
+
+CREATE POLICY p_tenant_baca ON lab11.pelanggan
+  FOR SELECT TO app_read, app_write
+  USING (tenant_id = nullif(current_setting('app.tenant', true), '')::int);
+
+CREATE POLICY p_tenant_tulis ON lab11.pelanggan
+  FOR ALL TO app_write
+  USING      (tenant_id = nullif(current_setting('app.tenant', true), '')::int)
+  WITH CHECK (tenant_id = nullif(current_setting('app.tenant', true), '')::int);
+
+SELECT policyname, cmd, roles FROM pg_policies
+WHERE schemaname = 'lab11' AND tablename = 'pelanggan' ORDER BY 1;
 
 Keluaran:
 ---
@@ -79,7 +162,17 @@ Alasan keputusan:
 
 8. Q08
 Perintah:
----
+-- Diminta: sebagai app_laporan penyewa 1, hitung baris yang terlihat dan baris penyewa 2.
+-- Dipilih: uji positif dan negatif sekaligus dalam satu transaksi dengan SET LOCAL, ditambah uji tanpa konteks.
+-- Alternatif: hanya uji positif; tidak dipilih karena tidak membuktikan data penyewa lain tersembunyi.
+BEGIN; SET LOCAL ROLE app_laporan; SET LOCAL app.tenant = '1';
+  SELECT count(*) AS terlihat_tenant1 FROM lab11.pelanggan;                   -- harapkan 10000
+  SELECT count(*) AS harus_nol FROM lab11.pelanggan WHERE tenant_id = 2;      -- harapkan 0
+COMMIT;
+
+BEGIN; SET LOCAL ROLE app_laporan;
+  SELECT count(*) AS tanpa_konteks FROM lab11.pelanggan;                      -- harapkan 0, bukan galat
+COMMIT;
 
 Keluaran:
 ---
@@ -89,7 +182,33 @@ Alasan keputusan:
 
 9. Q09
 Perintah:
----
+-- Diminta: bandingkan baris yang dilihat skema_owner sebelum/sesudah FORCE, lalu pg_read_all_data dan BYPASSRLS.
+-- Dipilih: hitung tiap kondisi dengan SET LOCAL ROLE, lalu bersihkan peran analitik; FORCE dibiarkan menyala.
+-- Alternatif: hanya membaca dokumentasi PostgreSQL; tidak dipilih karena perlu bukti nyata.
+ALTER TABLE lab11.pelanggan NO FORCE ROW LEVEL SECURITY;   -- kondisi awal agar skrip bisa diulang
+
+BEGIN; SET LOCAL ROLE skema_owner;
+  SELECT count(*) AS owner_sebelum_force FROM lab11.pelanggan;       -- harapkan 30000
+COMMIT;
+
+ALTER TABLE lab11.pelanggan FORCE ROW LEVEL SECURITY;
+BEGIN; SET LOCAL ROLE skema_owner;
+  SELECT count(*) AS owner_sesudah_force FROM lab11.pelanggan;       -- harapkan 0
+COMMIT;
+
+GRANT pg_read_all_data TO app_analitik;
+BEGIN; SET LOCAL ROLE app_analitik;
+  SELECT count(*) AS analitik_pg_read_all_data FROM lab11.pelanggan; -- harapkan 0
+COMMIT;
+
+ALTER ROLE app_analitik BYPASSRLS;
+BEGIN; SET LOCAL ROLE app_analitik;
+  SELECT count(*) AS analitik_bypassrls FROM lab11.pelanggan;        -- harapkan 30000
+COMMIT;
+
+-- pembersihan
+ALTER ROLE app_analitik NOBYPASSRLS;
+REVOKE pg_read_all_data FROM app_analitik;
 
 Keluaran:
 ---
@@ -99,7 +218,27 @@ Alasan keputusan:
 
 10. Q10
 Perintah:
----
+-- Diminta: tunjukkan bagaimana konteks penyewa tertinggal di kolam koneksi, dan pola SET LOCAL / set_config(..., true).
+-- Dipilih: simulasi satu koneksi yang dipakai dua permintaan; pola aman memakai set_config(..., true) di dalam transaksi.
+-- Alternatif: SET biasa lalu RESET manual; tidak dipilih karena mudah terlewat bila terjadi galat.
+
+-- Permintaan 1 (penyewa 1) menyetel di tingkat SESI, lalu koneksi kembali ke pool
+SET app.tenant = '1';
+-- Permintaan 2 memakai koneksi yang sama dan lupa menyetel konteks
+BEGIN; SET LOCAL ROLE app_laporan;
+  SELECT count(*) AS bocor_ke_permintaan_berikutnya FROM lab11.pelanggan;   -- 10000 = data penyewa 1 bocor
+COMMIT;
+RESET app.tenant;
+
+-- Pola aman: konteks hanya hidup di dalam transaksi
+BEGIN; SET LOCAL ROLE app_laporan;
+  SELECT set_config('app.tenant', '2', true);
+  SELECT count(*) AS penyewa2_dalam_transaksi FROM lab11.pelanggan;         -- 10000
+COMMIT;
+SHOW app.tenant;                                                            -- kosong: konteks ikut hilang
+BEGIN; SET LOCAL ROLE app_laporan;
+  SELECT count(*) AS permintaan_berikutnya FROM lab11.pelanggan;            -- 0
+COMMIT;
 
 Keluaran:
 ---
@@ -109,7 +248,18 @@ Alasan keputusan:
 
 11. Q11
 Perintah:
----
+-- Diminta: tiga cara isolasi RLS masih bisa gagal, masing-masing dengan satu kalimat perbaikan, dan bukti nyata.
+-- Dipilih: pemilik tanpa FORCE, peran BYPASSRLS/superuser, dan konteks bocor di pool; bukti dari Q9 dan Q10.
+-- Alternatif: celah lain (view tanpa security_invoker, kebijakan tanpa WITH CHECK); dibahas singkat saja.
+--
+-- Celah 1: pemilik tabel melewati RLS bila tidak ada FORCE.            Perbaikan: FORCE ROW LEVEL SECURITY.
+-- Celah 2: peran dengan BYPASSRLS atau superuser kebal kebijakan.      Perbaikan: audit pg_roles, jangan beri BYPASSRLS.
+-- Celah 3: setelan tingkat sesi tertinggal di kolam koneksi.           Perbaikan: SET LOCAL / set_config(..., true).
+
+-- Bukti kondisi saat ini (celah 1 dan 2 bisa dideteksi dari katalog)
+SELECT rolname, rolsuper, rolbypassrls FROM pg_roles WHERE rolsuper OR rolbypassrls ORDER BY 1;
+SELECT relname, relrowsecurity, relforcerowsecurity
+FROM pg_class WHERE relnamespace = 'lab11'::regnamespace AND relkind = 'r' ORDER BY 1;
 
 Keluaran:
 ---

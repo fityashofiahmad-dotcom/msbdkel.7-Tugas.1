@@ -1,0 +1,9 @@
+-- Diminta: membuktikan bahwa hak yang melekat pada kepemilikan tidak bisa dicabut dengan REVOKE.
+-- Dipilih: REVOKE UPDATE dari pemilik, uji, lalu GRANT ulang oleh pemilik sendiri dan uji lagi.
+-- Alternatif: mengganti pemilik tabel (ALTER ... OWNER TO); tidak dipilih karena bukan yang diuji.
+REVOKE UPDATE ON lab11.pelanggan FROM skema_owner;
+SET ROLE skema_owner;
+BEGIN; UPDATE lab11.pelanggan SET kota = kota WHERE id = 3; ROLLBACK;   -- ditolak?
+GRANT UPDATE ON lab11.pelanggan TO skema_owner;                          -- oleh pemilik sendiri
+BEGIN; UPDATE lab11.pelanggan SET kota = kota WHERE id = 3; ROLLBACK;   -- berhasil?
+RESET ROLE;

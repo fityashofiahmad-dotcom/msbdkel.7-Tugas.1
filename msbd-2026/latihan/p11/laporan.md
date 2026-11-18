@@ -628,6 +628,16 @@ Keluaran:
 2. Refleksi B
 
 3. Refleksi C
+Satu lapis yang menghapus sebab masalah:
+Query berparameter (parameterized query / prepared statement, dipadukan dengan daftar putih tertutup untuk pengenal seperti kolom dan arah urut pada Q15–Q16). Lapisan ini memisahkan struktur perintah SQL dari nilai masukan pengguna sejak tahap parsing protokol basis data, sehingga data masukan secara struktural tidak pernah dapat berubah menjadi kode SQL yang dieksekusi.
+
+Peran tiga lapis pertahanan lainnya (defense-in-depth):
+
+Prinsip Hak Minimum (Least Privilege per peran dan tabel — bukti Q14): Membatasi radius kerusakan (blast radius) apabila celah injeksi tetap ada di kode aplikasi. Pada Q14, meski payload zz' OR '1'='1' -- masih berhasil memanipulasi klausa WHERE, koneksi app_laporan yang hanya memiliki hak SELECT terbatas tidak dapat menyentuh tabel kredensial lain (seperti lab11.akun) maupun memodifikasi/menghapus baris (UPDATE/DELETE/DROP).
+
+Isolasi Baris di Basis Data (Row-Level Security — bukti Q14): Menegakkan batas antar-penyewa langsung di mesin basis data sekalipun kondisi WHERE aplikasi jebol. Pada Q14, injeksi OR '1'='1' tetap tertahan pada 10.000 baris penyewa aktif (tenant_id = 1) dan gagal menembus 20.000 baris milik penyewa 2 dan 3.
+
+Pembatasan Waktu Eksekusi & Pemantauan Log (statement_timeout — bukti Q18): Mencegah penyalahgunaan sumber daya (denial of service) dan memaksa serangan time-based blind injection meninggalkan jejak bising. Pada Q18, statement_timeout = '5s' memutus eksekusi pg_sleep berdurasi panjang dan mencatat galat eksplisit SQLSTATE 57014 beserta teks perintahnya di log server sehingga upaya eksploitasi segera terdeteksi.
 
 4. Refleksi D
 Mengenkripsi kolom sensitif saja tidak serta-merta membuat basis data aman secara menyeluruh. Berdasarkan temuan pada Q21–Q24, terdapat dua ancaman yang tetap terbuka dan satu risiko operasional:

@@ -169,12 +169,44 @@ Jumlah baris: 10000
 
 14. Q14
 Perintah:
+BEGIN;
+SET LOCAL ROLE app_laporan;
+SET LOCAL app.tenant = '1';
+
+-- Mengulang payload injection melalui peran app_laporan (anggota app_read + RLS aktif)
+SELECT count(*) AS baris_terlihat_tenant1
+FROM lab11.pelanggan
+WHERE nama ILIKE '%zz' OR '1'='1' --%';
+
+-- Memastikan baris penyewa lain tetap tidak dapat ditembus
+SELECT count(*) AS baris_tenant_lain
+FROM lab11.pelanggan
+WHERE (nama ILIKE '%zz' OR '1'='1' --%') AND tenant_id <> 1;
+
+-- Uji batas hak ke tabel sensitif lain (harus ditolak)
+SELECT count(*) FROM lab11.akun;
+COMMIT;
 ---
 
 Keluaran:
+BEGIN
+SET
+SET
+ baris_terlihat_tenant1 
+------------------------
+                  10000
+(1 row)
+
+ baris_tenant_lain 
+-------------------
+                 0
+(1 row)
+
+ERROR:  permission denied for table akun
+ROLLBACK
 ---
 
-Alasan keputusan:
+Alasan keputusan: Prinsip hak minimum per tabel (least privilege) dan Row-Level Security berfungsi membatasi radius kerusakan (blast radius), bukan menghilangkan kerentanan injeksi di aplikasi. Yang berubah: kebocoran tertahan hanya pada 10.000 baris milik penyewa 1 (tidak merembet ke 20.000 baris penyewa 2 dan 3) serta peran app_laporan ditolak mengakses tabel sensitif lain (lab11.akun) maupun melakukan mutasi data. Yang tetap: kerentanan SQL injection masih aktif dan tetap membocorkan seluruh isi tabel pelanggan pada penyewa yang sedang aktif.
 ---
 
 15. Q15

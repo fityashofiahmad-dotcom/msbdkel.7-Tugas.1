@@ -118,10 +118,21 @@ Alasan keputusan:
 ---
 
 12. Q12
+
 Perintah:
+
+# Dijalankan di dalam kontainer lab11-web (jaringan tertutup):
+python rentan.py "Pelanggan 12" 
+-- Verifikasi pada sesi app_portal dengan konteks penyewa 1:
+BEGIN;
+SET LOCAL ROLE app_portal;
+SET LOCAL app.tenant = '1';
+SELECT id, nama, kota FROM lab11.pelanggan WHERE nama ILIKE '%Pelanggan 12%';
+COMMIT;
 ---
 
-Keluaran:
+Keluaran: SQL tercetak: SELECT id, nama, kota FROM lab11.pelanggan WHERE nama ILIKE '%Pelanggan 12%'
+Jumlah baris: 365
 ---
 
 Alasan keputusan:

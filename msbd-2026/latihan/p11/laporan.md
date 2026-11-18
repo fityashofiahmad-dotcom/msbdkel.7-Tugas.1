@@ -367,14 +367,61 @@ RESET
 Alasan keputusan: Generalisasi tanggal lahir menjadi tahun (date_trunc('year', lahir)) menurunkan keunikan quasi-identifier secara drastis (lebih dari 99%), sehingga meningkatkan k-anonymity dan menyulitkan penautan identitas (linkage attack) dengan dataset eksternal. Namun, penyamaran statis tidak kebal terhadap differencing attack (serangan selisih agregat): dengan membandingkan hasil agregasi seluruh kelompok (count = 3000) dan kelompok yang mengecualikan satu ID spesifik (id <> 15, count = 2999), analis tetap dapat menyimpulkan saldo bulat milik ID 15 (450.000.000 - 448.500.000 = 1.500.000).
 
 25. Q25
+
 Perintah:
----
+
+SQL
+CREATE TABLE lab11.jejak_audit (
+  id          bigserial PRIMARY KEY,
+  waktu       timestamptz NOT NULL DEFAULT now(),
+  pelaku      text NOT NULL DEFAULT session_user,
+  peran_aktif text NOT NULL DEFAULT current_user,
+  aksi        text NOT NULL,
+  tabel       text NOT NULL,
+  kunci       text,
+  nilai_lama  jsonb,
+  nilai_baru  jsonb
+);
+
+CREATE OR REPLACE FUNCTION lab11.rekam_audit()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = lab11, pg_temp
+AS $$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    INSERT INTO lab11.jejak_audit(aksi, tabel, kunci, nilai_baru)
+    VALUES (TG_OP, TG_TABLE_NAME, NEW.id::text, to_jsonb(NEW));
+    RETURN NEW;
+  ELSIF TG_OP = 'UPDATE' THEN
+    INSERT INTO lab11.jejak_audit(aksi, tabel, kunci, nilai_lama, nilai_baru)
+    VALUES (TG_OP, TG_TABLE_NAME, NEW.id::text, to_jsonb(OLD), to_jsonb(NEW));
+    RETURN NEW;
+  ELSIF TG_OP = 'DELETE' THEN
+    INSERT INTO lab11.jejak_audit(aksi, tabel, kunci, nilai_lama)
+    VALUES (TG_OP, TG_TABLE_NAME, OLD.id::text, to_jsonb(OLD));
+    RETURN OLD;
+  END IF;
+  RETURN NULL;
+END;
+$$;
+
+CREATE TRIGGER trg_audit_pelanggan
+AFTER INSERT OR UPDATE OR DELETE ON lab11.pelanggan
+FOR EACH ROW EXECUTE FUNCTION lab11.rekam_audit();
+
+REVOKE ALL ON lab11.jejak_audit FROM PUBLIC, app_read, app_write, app_portal, app_laporan, app_analitik;
 
 Keluaran:
----
 
-Alasan keputusan:
----
+Plaintext
+CREATE TABLE
+CREATE FUNCTION
+CREATE TRIGGER
+REVOKE
+
+Alasan keputusan: Hak INSERT, UPDATE, DELETE, dan SELECT pada lab11.jejak_audit tidak diberikan kepada peran aplikasi (app_portal / app_write). Satu-satunya mekanisme penulisan adalah melalui fungsi trigger dengan atribut SECURITY DEFINER. Hal ini memastikan integritas jejak audit (tamper-evident): pengguna aplikasi tidak dapat menyisipkan log palsu, menghapus jejak aktivitasnya sendiri, maupun mengintip data mentah di dalam tabel audit. Kolom session_user digunakan karena current_user di dalam fungsi SECURITY DEFINER akan selalu mencatat nama pemilik fungsi (postgres/skema_owner), bukan identitas login asli yang memicu transaksi.
 
 26. Q26
 Perintah:

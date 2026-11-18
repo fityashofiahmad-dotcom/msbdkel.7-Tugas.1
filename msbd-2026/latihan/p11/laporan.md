@@ -643,9 +643,32 @@ Karena pgp_sym_encrypt menggunakan salt/IV acak yang menghasilkan ciphertext ber
 
 5. Refleksi E
 
-## Peta Tiket #1134 ke UU PDP
-Keluhan | Pasal relevan | Kontrol teknis pencegah | Bukti
-  ....  |      ....     |           ....          | ....
-
-  ## Pernyataan Etika
-  Seluruh percobaan serangan hanya dijalankan pada kontainer lab11 milik sendiri di jaringan tertutup. (tanda tangan tiap anggota)
+A. Ketegangan antara Pasal 31 dan Pasal 43 UU PDP:
+  Pasal 31 UU No. 27 Tahun 2022 (UU PDP) mewajibkan Pengendali Data Pribadi untuk merekam seluruh kegiatan pemrosesan Data Pribadi (siapa yang mengakses/mengubah, kapan, dan operasi apa yang dilakukan) sebagai bentuk akuntabilitas dan pembuktian kepatuhan (auditability).
+  Sebaliknya, Pasal 43 UU PDP mewajibkan Pengendali Data Pribadi untuk menghapus Data Pribadi apabila subjek data menarik persetujuan atau mengajukan permintaan penghapusan (right to erasure).
+  Sebagaimana dibuktikan pada Q29, kedua kewajiban ini berbenturan secara teknis: ketika trigger audit menyimpan seluruh objek baris lama (to_jsonb(OLD)) ke dalam tabel lab11.jejak_audit demi memenuhi Pasal 31, jejak audit tersebut justru melanggar Pasal 43 karena masih menyimpan salinan utuh nik, nama, dan surel subjek data (sisa_jejak_audit = 2) meskipun baris utamanya telah dihapus dari tabel pelanggan dan transaksi.
+  
+B. Usulan Penyelesaian yang Dapat Dipertanggungjawabkan di Hadapan Pemeriksa:
+Menerapkan pola Minimisasi Data Audit (Redaksi PII pada Trigger) yang dikombinasikan dengan Pengidentifikasi Pseudonim (Surrogate Key):
+  Redaksi PII di Trigger Audit: Fungsi rekam_audit() dimodifikasi agar tidak menyimpan nilai atribut Data Pribadi mentah (nik, nama, surel, rekening) ke kolom nilai_lama maupun nilai_baru. Jejak audit cukup merekam metadata akuntabilitas: waktu, pelaku, aksi, tabel, kunci (ID pseudonim internal tanpa makna pribadi), serta daftar nama kolom yang berubah (misalnya ARRAY['kota', 'saldo']). Dengan pendekatan ini, jejak audit tetap utuh, kronologis, dan immutable (memenuhi Pasal 31), tanpa menyimpan satu pun data pribadi yang melanggar kewajiban penghapusan (Pasal 43).
+  Alternatif Crypto-Shredding (jika nilai lama wajib disimpan untuk forensik keuangan): Mengenkripsi payload JSON di tabel audit menggunakan kunci enkripsi unik per individu (per-subject key) di tabel terpisah. Saat subjek meminta penghapusan (Pasal 43), sistem menghapus kunci subjek tersebut sehingga data audit tetap utuh secara struktur (Pasal 31), tetapi tidak lagi dapat dibaca kembali secara kriptografis oleh siapa pun.
+  
+  Peta Tiket #1134 ke UU PDP
+  
+  K1: Kebocoran data lintas-penyewa (cross-tenant) akibat kueri aplikasi lalai memfilter tenant_id.Pasal 35 & Pasal 39 ayat (1)Row-Level Security (p_tenant_baca, p_tenant_tulis), FORCE ROW LEVEL SECURITY, dan konteks transaksi SET LOCAL app.tenant.Q06–Q10: Kueri app_laporan dengan app.tenant = '1' mengembalikan 10000 baris penyewa 1 dan 0 baris saat memfilter tenant_id = 2.
+  K2: Penyalahgunaan hak akses internal atau pengambilan data massal secara tidak wajar oleh staf/akun aplikasi.Pasal 39 ayat (2) & Pasal 46Principle of Least Privilege pemisahan peran, tampilan tersamar (v_pelanggan_samar), serta trigger audit SECURITY DEFINER + kueri sinyal anomali.Q05, Q23, Q25–Q27: app_analitik ditolak membaca tabel asli (permission denied), hanya melihat data tersamar, dan lonjakan/akses luar jam kerja terdeteksi di jejak_audit.
+  K3: Eksposur data sensitif (kata sandi, nomor rekening, NIK) dalam bentuk teks terang (plaintext).Pasal 36 & Pasal 39Hashing adaptif bcrypt (crypt + gen_salt('bf')) untuk kata sandi dan enkripsi kolom simetris (pgp_sym_encrypt) dengan kunci per sesi.Q19–Q21: Hash kata sandi identik menghasilkan keluaran berbeda, dan pgp_sym_encrypt('x','k') = pgp_sym_encrypt('x','k') bernilai false.
+  K4: Celah SQL Injection pada pencarian portal yang memungkinkan ekstraksi seluruh tabel pelanggan.Pasal 35 & Pasal 46Parameterized queries (%s), validasi whitelist tertutup untuk pengidentifikasi kolom/arah urut, serta batas waktu kueri (statement_timeout).Q15–Q18: Payload zz' OR '1'='1' -- diperlakukan sebagai string harfiah (0 baris), input kolom ilegal ditolak ValueError, dan kueri lambat terhenti (SQLSTATE 57014).
+  K5: Permintaan penghapusan data pelanggan tidak tuntas atau masih menyisakan data pribadi di sistem.Pasal 8 & Pasal 43 ayat (1)Pencatatan tiket penghapusan bertenggat 72 jam (permintaan_hapus), penghapusan berjenjang anak-ke-induk, dan audit sisa PII.Q28–Q29: Data subjek ID 12 dan 13 bersih di tabel utama (0) dan transaksi (0), serta teridentifikasi 2 sisa nik di jejak_audit untuk direduksi.
+  
+  
+**  Pernyataan Etika **
+  
+  "Seluruh percobaan serangan dan pengujian keamanan pada praktikum ini hanya dijalankan pada kontainer lab11 milik sendiri di jaringan internal tertutup (lab11_labnet, Internal: true) untuk tujuan pembelajaran manajemen keamanan basis data".
+  
+  
+  Nama Anggota                      |      NIM       |   Tanda Tangan  
+  
+  Fahri Arizal                          251402102           (ttd)
+  Fitya Shofi Ahmad                     251402132           (ttd)
+  Mar'ie Rizqullah Khairan Damanik      251402129           (ttd)

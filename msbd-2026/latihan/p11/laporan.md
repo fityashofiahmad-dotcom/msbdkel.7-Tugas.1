@@ -564,14 +564,52 @@ CREATE TABLE
 Alasan keputusan: Menggunakan DEFAULT now() + interval '72 hours' alih-alih kolom GENERATED ALWAYS AS ... STORED karena fungsi now() bersifat STABLE (bergantung pada waktu transaksi), sedangkan PostgreSQL 17 mewajibkan ekspresi pada kolom generated bersifat IMMUTABLE (hasilnya selalu tetap untuk input yang sama). Nilai tenggat 72 jam ini selaras dengan batas waktu pemenuhan hak penghapusan data pribadi dalam regulasi perlindungan data (UU PDP).
 
 29. Q29
+
 Perintah:
----
+
+SQL
+-- 1. Catat permintaan penghapusan untuk subjek id 12 dan 13
+INSERT INTO lab11.permintaan_hapus (subjek_id, alasan)
+VALUES (12, 'Permintaan penarikan persetujuan subjek data'),
+       (13, 'Permintaan penarikan persetujuan subjek data');
+
+-- 2. Hapus data anak (transaksi) lalu data induk (pelanggan)
+DELETE FROM lab11.transaksi WHERE pelanggan_id IN (12, 13);
+DELETE FROM lab11.pelanggan WHERE id IN (12, 13);
+
+-- 3. Tandai permintaan selesai
+UPDATE lab11.permintaan_hapus SET status = 'SELESAI', selesai_pada = now() WHERE subjek_id IN (12, 13);
+
+-- 4. Periksa sisa data di ketiga lokasi
+SELECT count(*) AS sisa_tabel_utama FROM lab11.pelanggan WHERE id IN (12,13);
+SELECT count(*) AS sisa_transaksi   FROM lab11.transaksi WHERE pelanggan_id IN (12,13);
+SELECT count(*) AS sisa_jejak_audit FROM lab11.jejak_audit
+WHERE kunci IN ('12','13') AND nilai_lama ? 'nik';
 
 Keluaran:
----
 
-Alasan keputusan:
----
+Plaintext
+INSERT 0 2
+DELETE 8
+DELETE 2
+UPDATE 2
+
+ sisa_tabel_utama 
+------------------
+                0
+(1 row)
+
+ sisa_transaksi 
+----------------
+              0
+(1 row)
+
+ sisa_jejak_audit 
+------------------
+                2
+(1 row)
+
+Alasan keputusan: Meskipun data subjek ID 12 dan 13 telah bersih dari tabel operasional utama (sisa_tabel_utama = 0) dan tabel anak (sisa_transaksi = 0), data pribadi mentah (termasuk nik, nama, dan surel) masih ditemukan hidup sebanyak 2 baris di dalam kolom nilai_lama pada lab11.jejak_audit (sisa_jejak_audit = 2). Hal ini terjadi karena trigger rekam_audit() mengeksekusi to_jsonb(OLD) saat perintah DELETE dijalankan, sehingga menyalin seluruh salinan data pribadi ke log audit.
 
 30. Q30
 Perintah:

@@ -611,15 +611,16 @@ UPDATE 2
 
 Alasan keputusan: Meskipun data subjek ID 12 dan 13 telah bersih dari tabel operasional utama (sisa_tabel_utama = 0) dan tabel anak (sisa_transaksi = 0), data pribadi mentah (termasuk nik, nama, dan surel) masih ditemukan hidup sebanyak 2 baris di dalam kolom nilai_lama pada lab11.jejak_audit (sisa_jejak_audit = 2). Hal ini terjadi karena trigger rekam_audit() mengeksekusi to_jsonb(OLD) saat perintah DELETE dijalankan, sehingga menyalin seluruh salinan data pribadi ke log audit.
 
-30. Q30
-Perintah:
----
+30. Q30Perintah:(Penyusunan pemetaan regulasi UU No. 27 Tahun 2022 tentang Pelindungan Data Pribadi ke kontrol teknis praktikum)Keluaran:Keluhan (Tiket #1134)Kewajiban / Hak UU PDPPasal RelevanKontrol Teknis Pencegahan di Praktikum
 
 Keluaran:
----
-
-Alasan keputusan:
----
+    K1: Kebocoran atau akses lintas-penyewa (cross-tenant) akibat kueri aplikasi yang lalai memfilter tenant_id.Kewajiban Pengendali Data Pribadi melindungi dan memastikan keamanan Data Pribadi dari pemrosesan tidak sah.Pasal 35 & Pasal 39 ayat (1)Row-Level Security (RLS) (p_tenant_baca, p_tenant_tulis) + FORCE ROW LEVEL SECURITY dan SET LOCAL app.tenant (Q6–Q10).
+    K2: Penyalahgunaan hak akses internal / pencurian data massal oleh staf atau akun dengan hak berlebih.Kewajiban mencegah akses tidak sah melalui sistem elektronik yang andal, aman, dan bertanggung jawab.Pasal 39 ayat (2) & Pasal 46Principle of Least Privilege pemisahan peran (app_read, app_analitik), penyamaran tampilan (v_pelanggan_samar), dan Audit Trail + Deteksi Anomali (Q5, Q23, Q25–Q27).
+    K3: Eksposur data pribadi sensitif (NIK, nomor rekening, kata sandi) dalam bentuk teks terang.Kewajiban menjaga kerahasiaan Data Pribadi dan melindungi data spesifik/keuangan.Pasal 36 & Pasal 39Hashing bcrypt (crypt + gen_salt('bf')) untuk kata sandi dan Enkripsi Kolom Simetris (pgp_sym_encrypt) untuk rekening (Q19–Q21).
+    K4: Celah SQL Injection pada portal pencarian yang memungkinkan pihak luar mengekstrak seluruh tabel pelanggan.Kewajiban Pengendali mencegah kegagalan pelindungan Data Pribadi akibat kerentanan sistem.Pasal 35 & Pasal 46Parameterized Queries (%s), validasi whitelist untuk pengidentifikasi, dan statement_timeout (Q15–Q18).
+    K5: Permintaan penghapusan akun/data oleh pelanggan yang tidak ditindaklanjuti atau masih menyisakan jejak PII.Hak Subjek Data Pribadi untuk mengakhiri pemrosesan, menghapus, dan/atau memusnahkan Data Pribadi.Pasal 8 & Pasal 43 ayat (1)Alur pencatatan tenggat 72 jam (permintaan_hapus) dan penghapusan berjenjang dari tabel anak ke induk (Q28–Q29).
+    
+  Alasan keputusan: Pemetaan ini menghubungkan langsung mandat hukum dalam UU No. 27 Tahun 2022 (UU PDP) dengan mekanisme pertahanan berlapis (defense-in-depth) di level basis data. Setiap kewajiban pengendali data (keamanan pemrosesan, kerahasiaan, pencegahan akses tidak sah, dan pemenuhan hak penghapusan) tidak cukup hanya mengandalkan kebijakan administratif, melainkan harus ditegakkan secara teknis di dalam mesin PostgreSQL.
 
 ## Jawaban refleksi A-E
 1. Refleksi A

@@ -135,7 +135,7 @@ Keluaran: SQL tercetak: SELECT id, nama, kota FROM lab11.pelanggan WHERE nama IL
 Jumlah baris: 365
 ---
 
-Alasan keputusan:
+Alasan keputusan: Pengujian baseline dengan masukan normal "Pelanggan 12" dilakukan terlebih dahulu untuk mengamati struktur kueri yang dibentuk aplikasi sebelum diuji dengan payload injeksi. Dari teks SQL yang tercetak, substring Pelanggan 12 di dalam literal pola '%Pelanggan 12%' berasal langsung dari masukan pengguna yang dirangkai secara mentah ke dalam string perintah SQL.
 ---
 
 13. Q13

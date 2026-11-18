@@ -1411,3 +1411,5 @@ Menerapkan pola Minimisasi Data Audit (Redaksi PII pada Trigger) yang dikombinas
   Fahri Arizal                          251402102           (ttd)
   Fitya Shofi Ahmad                     251402132           (ttd)
   Mar'ie Rizqullah Khairan Damanik      251402129           (ttd)
+
+tautan merge: https://github.com/fityashofiahmad-dotcom/msbdkel.7-Tugas.1/pull/8

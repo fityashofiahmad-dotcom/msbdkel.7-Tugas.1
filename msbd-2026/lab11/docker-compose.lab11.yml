@@ -1,0 +1,40 @@
+# DUMMY pengganti modul praktikum: dua kontainer di jaringan internal (tanpa internet).
+name: lab11            # membuat jaringan bernama lab11_labnet
+
+services:
+  db:
+    image: postgres:17.5
+    container_name: lab11-db
+    environment:
+      POSTGRES_PASSWORD: lab11_postgres
+      POSTGRES_DB: msbd
+    volumes:
+      - sqlvol:/sql    # folder tujuan untuk: docker cp sql/lab11_setup.sql lab11-db:/sql/...
+    networks: [labnet]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d msbd"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  web:
+    build: ./app
+    container_name: lab11-web
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGDATABASE: msbd
+    volumes:
+      - ./app:/app
+    working_dir: /app
+    command: sleep infinity
+    networks: [labnet]
+
+networks:
+  labnet:
+    internal: true     # bukti jaringan tertutup: docker network inspect lab11_labnet --format '{{.Internal}}'
+
+volumes:
+  sqlvol:

@@ -2,4 +2,4 @@ dump/
 *.dump
 .env
 .DS_Store
-.venv/
+.venv/lab11/

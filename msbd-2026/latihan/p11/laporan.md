@@ -270,14 +270,48 @@ Log Server PostgreSQL (postgresql.log): Jika konfigurasi log_statement = 'all' a
 Riwayat Klien / Command History (~/.psql_history): Jika administrator atau skrip menjalankan perintah secara interaktif lewat psql, kunci akan tersimpan dalam file riwayat perintah di sistem operasi.
 
 23. Q23
+
 Perintah:
----
+
+SQL
+REVOKE pg_read_all_data FROM app_analitik;
+
+CREATE VIEW lab11.v_pelanggan_samar WITH (security_barrier = true) AS
+SELECT id, tenant_id,
+       left(nama,1) || repeat('*', greatest(length(nama)-1, 1)) AS nama,
+       'xxxxxxxxxxxx' || right(nik, 4)                           AS nik,
+       regexp_replace(surel, '^[^@]+', '****')                  AS surel,
+       date_trunc('year', lahir)::date                          AS lahir_tahun,
+       kota, round(saldo, -5)                                   AS saldo_bulat
+FROM lab11.pelanggan;
+
+REVOKE ALL   ON lab11.pelanggan         FROM app_analitik;
+GRANT SELECT ON lab11.v_pelanggan_samar TO   app_analitik;
+
+-- Pengujian akses sebagai app_analitik:
+SET ROLE app_analitik;
+SELECT * FROM lab11.pelanggan LIMIT 1;        -- Harus ditolak
+SELECT * FROM lab11.v_pelanggan_samar LIMIT 3; -- Berhasil dengan data tersamar
+RESET ROLE;
 
 Keluaran:
----
 
-Alasan keputusan:
----
+Plaintext
+REVOKE ROLE
+CREATE VIEW
+REVOKE
+GRANT
+SET
+ERROR:  permission denied for table pelanggan
+ id | tenant_id |    nama     |       nik        |      surel      | lahir_tahun |   kota    | saldo_bulat 
+----+-----------+-------------+------------------+-----------------+-------------+-----------+-------------
+  1 |         1 | P********** | xxxxxxxxxxxx0001 | ****@contoh.id  | 1990-01-01  | Jakarta   |     1500000
+  2 |         1 | P********** | xxxxxxxxxxxx0002 | ****@contoh.id  | 1985-01-01  | Bandung   |     2300000
+  3 |         1 | P********** | xxxxxxxxxxxx0003 | ****@contoh.id  | 1992-01-01  | Surabaya  |      800000
+(3 rows)
+RESET
+
+Alasan keputusan: VIEW dibuat tanpa opsi security_invoker = true sehingga dijalankan dengan hak akses pemilik tampilan (definer rights), memungkinkan app_analitik membaca hasil penyamaran tanpa perlu diberikan hak akses langsung ke tabel asli lab11.pelanggan. Opsi WITH (security_barrier = true) ditambahkan untuk mencegah serangan side-channel melalui fungsi buatan pengguna (user-defined functions) yang berbiaya murah yang dapat membocorkan baris sebelum difilter oleh tampilan.
 
 24. Q24
 Perintah:

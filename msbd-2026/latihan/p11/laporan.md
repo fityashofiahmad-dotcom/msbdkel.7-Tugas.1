@@ -208,14 +208,42 @@ Alasan keputusan:
 ---
 
 21. Q21
+
 Perintah:
----
+
+SQL
+SET app.kunci_kolom = 'kunci-lab11-jangan-dipakai-di-produksi';
+ALTER TABLE lab11.pelanggan ADD COLUMN rekening_enc bytea;
+
+UPDATE lab11.pelanggan
+  SET rekening_enc = pgp_sym_encrypt(rekening, current_setting('app.kunci_kolom'))
+WHERE id <= 1000;
+
+-- Verifikasi dekripsi 1 baris
+SELECT id, rekening, 
+       pgp_sym_decrypt(rekening_enc, current_setting('app.kunci_kolom')) AS rekening_dekrip
+FROM lab11.pelanggan WHERE id = 1;
+
+-- Buktikan sifat non-deterministik (IV/Salt acak)
+SELECT pgp_sym_encrypt('x','k') = pgp_sym_encrypt('x','k') AS sama;
 
 Keluaran:
----
 
-Alasan keputusan:
----
+Plaintext
+SET
+ALTER TABLE
+UPDATE 1000
+ id |   rekening   | rekening_dekrip 
+----+--------------+-----------------
+  1 | 100000000001 | 100000000001
+(1 row)
+
+ sama 
+------
+ f
+(1 row)
+
+Alasan keputusan: Menggunakan pgp_sym_encrypt (OpenPGP symmetric encryption) dengan menyuntikkan kunci melalui parameter sesi (app.kunci_kolom) agar kunci tidak disimpan permanen (hardcoded) di dalam skema atau tabel database. Pengujian pgp_sym_encrypt('x','k') = pgp_sym_encrypt('x','k') menghasilkan false (f) karena OpenPGP secara otomatis menyertakan random salt dan Initialization Vector (IV) pada setiap proses enkripsi. Hal ini mencegah serangan analisis frekuensi atau pencocokan pola (pattern matching) antarbaris yang memiliki nilai rekening sama.
 
 22. Q22
 Perintah:

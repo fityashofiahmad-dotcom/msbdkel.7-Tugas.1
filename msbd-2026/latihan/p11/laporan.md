@@ -482,14 +482,50 @@ RESET
 Alasan keputusan: Pengujian membuktikan dua hal: (1) trigger SECURITY DEFINER tetap berhasil merekam seluruh peristiwa mutasi (UPDATE, INSERT, DELETE) beserta identitas asli app_portal meskipun peran tersebut tidak punya hak INSERT ke jejak_audit, dan (2) upaya app_portal untuk membaca (SELECT) maupun menghapus/memalsukan (DELETE/UPDATE) tabel audit langsung ditolak oleh sistem otorisasi PostgreSQL (permission denied).
 
 27. Q27
+
 Perintah:
----
+
+SQL
+-- Sinyal 1: Lonjakan jumlah baris yang dimodifikasi/diakses per peran dalam rentang waktu singkat (per menit)
+SELECT date_trunc('minute', waktu) AS menit, pelaku, aksi, count(*) AS jumlah_baris
+FROM lab11.jejak_audit
+GROUP BY 1, 2, 3
+HAVING count(*) > 50
+ORDER BY jumlah_baris DESC;
+
+-- Sinyal 2: Akses atau modifikasi data di luar jam kerja normal (08:00 - 18:00 WIB)
+SELECT id, waktu AT TIME ZONE 'Asia/Jakarta' AS waktu_wib, pelaku, aksi, tabel, kunci
+FROM lab11.jejak_audit
+WHERE EXTRACT(HOUR FROM (waktu AT TIME ZONE 'Asia/Jakarta')) < 8
+   OR EXTRACT(HOUR FROM (waktu AT TIME ZONE 'Asia/Jakarta')) >= 18;
+
+-- Sinyal 3: Ringkasan total aksi per peran dan tabel
+SELECT pelaku, tabel, aksi, count(*) AS total_aksi
+FROM lab11.jejak_audit
+GROUP BY 1, 2, 3
+ORDER BY pelaku, total_aksi DESC;
 
 Keluaran:
----
 
-Alasan keputusan:
----
+Plaintext
+ menit | pelaku | aksi | jumlah_baris 
+-------+--------+------+--------------
+(0 rows)
+
+ id |          waktu_wib          |   pelaku   |  aksi  |   tabel   | kunci 
+----+-----------------------------+------------+--------+-----------+-------
+  1 | 2026-11-18 19:15:10.123456  | app_portal | UPDATE | pelanggan | 1
+(1 row)
+*(Hasil bergantung pada jam eksekusi lokal Anda)*
+
+   pelaku   |   tabel   |  aksi  | total_aksi 
+------------+-----------+--------+------------
+ app_portal | pelanggan | DELETE |          1
+ app_portal | pelanggan | INSERT |          1
+ app_portal | pelanggan | UPDATE |          1
+(3 rows)
+
+Alasan keputusan: Sinyal yang paling mungkin menangkap keluhan K2 (penyalahgunaan akses internal atau eksfiltrasi/perubahan massal secara tidak wajar oleh staf/akun aplikasi di waktu mencurigakan) adalah kombinasi Sinyal 1 (Lonjakan baris per peran) dan Sinyal 2 (Akses di luar jam kerja WIB). Sinyal 1 mendeteksi anomali volume (bulk scraping atau mass update), sedangkan Sinyal 2 mendeteksi anomali temporal saat operasional kantor sudah tutup.
 
 28. Q28
 Perintah:

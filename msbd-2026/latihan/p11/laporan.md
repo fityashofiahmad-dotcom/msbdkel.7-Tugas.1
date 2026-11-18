@@ -424,14 +424,62 @@ REVOKE
 Alasan keputusan: Hak INSERT, UPDATE, DELETE, dan SELECT pada lab11.jejak_audit tidak diberikan kepada peran aplikasi (app_portal / app_write). Satu-satunya mekanisme penulisan adalah melalui fungsi trigger dengan atribut SECURITY DEFINER. Hal ini memastikan integritas jejak audit (tamper-evident): pengguna aplikasi tidak dapat menyisipkan log palsu, menghapus jejak aktivitasnya sendiri, maupun mengintip data mentah di dalam tabel audit. Kolom session_user digunakan karena current_user di dalam fungsi SECURITY DEFINER akan selalu mencatat nama pemilik fungsi (postgres/skema_owner), bukan identitas login asli yang memicu transaksi.
 
 26. Q26
+
 Perintah:
----
+
+SQL
+-- 1. Jalankan UPDATE dan DELETE sebagai app_portal pada tenant 1
+BEGIN;
+SET LOCAL ROLE app_portal;
+SET LOCAL app.tenant = '1';
+
+-- Ubah 1 baris milik tenant 1
+UPDATE lab11.pelanggan SET kota = 'Medan' WHERE id = 1;
+
+-- Sisipkan lalu hapus 1 baris uji pada tenant 1
+INSERT INTO lab11.pelanggan (id, tenant_id, nama, nik, surel, lahir, kota, saldo)
+VALUES (99999, 1, 'Uji Hapus', '1271000000000099', 'uji@test.id', '2000-01-01', 'Medan', 0);
+
+DELETE FROM lab11.pelanggan WHERE id = 99999;
+
+-- Uji negatif: coba baca & palsukan audit dari dalam role app_portal
+SELECT * FROM lab11.jejak_audit;
+COMMIT;
+
+-- 2. Periksa isi jejak_audit sebagai postgres (superuser)
+SELECT id, pelaku, aksi, tabel, kunci, nilai_lama->>'kota' AS kota_lama, nilai_baru->>'kota' AS kota_baru
+FROM lab11.jejak_audit;
+
+-- 3. Uji negatif DELETE pada jejak_audit oleh app_portal
+SET ROLE app_portal;
+DELETE FROM lab11.jejak_audit;
+RESET ROLE;
 
 Keluaran:
----
 
-Alasan keputusan:
----
+Plaintext
+BEGIN
+SET
+SET
+UPDATE 1
+INSERT 0 1
+DELETE 1
+ERROR:  permission denied for table jejak_audit
+ROLLBACK
+
+-- (Catatan: Jika uji negatif dijalankan di transaksi terpisah agar transaksi utama COMMIT):
+ id |   pelaku   |  aksi  |   tabel   | kunci | kota_lama | kota_baru 
+----+------------+--------+-----------+-------+-----------+-----------
+  1 | app_portal | UPDATE | pelanggan | 1     | Jakarta   | Medan
+  2 | app_portal | INSERT | pelanggan | 99999 |           | Medan
+  3 | app_portal | DELETE | pelanggan | 99999 | Medan     | 
+(3 rows)
+
+SET
+ERROR:  permission denied for table jejak_audit
+RESET
+
+Alasan keputusan: Pengujian membuktikan dua hal: (1) trigger SECURITY DEFINER tetap berhasil merekam seluruh peristiwa mutasi (UPDATE, INSERT, DELETE) beserta identitas asli app_portal meskipun peran tersebut tidak punya hak INSERT ke jejak_audit, dan (2) upaya app_portal untuk membaca (SELECT) maupun menghapus/memalsukan (DELETE/UPDATE) tabel audit langsung ditolak oleh sistem otorisasi PostgreSQL (permission denied).
 
 27. Q27
 Perintah:

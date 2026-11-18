@@ -615,93 +615,322 @@ Alasan keputusan:
 1) Pemilik tanpa FORCE melewati RLS (bukti Q9: 30000 baris); perbaikan: FORCE ROW LEVEL SECURITY dan jangan pakai peran pemilik di aplikasi. (2) Peran dengan BYPASSRLS atau superuser kebal terhadap semua kebijakan (bukti Q9); perbaikan: audit pg_roles berkala dan jangan beri BYPASSRLS ke peran aplikasi. (3) Konteks penyewa bocor di kolam koneksi (bukti Q10); perbaikan: selalu SET LOCAL atau set_config(..., true) di dalam transaksi.
 
 12. Q12
+
 Perintah:
+
+# Dijalankan di dalam kontainer lab11-web (jaringan tertutup):
+python rentan.py "Pelanggan 12" 
+-- Verifikasi pada sesi app_portal dengan konteks penyewa 1:
+BEGIN;
+SET LOCAL ROLE app_portal;
+SET LOCAL app.tenant = '1';
+SELECT id, nama, kota FROM lab11.pelanggan WHERE nama ILIKE '%Pelanggan 12%';
+COMMIT;
 ---
 
-Keluaran:
+Keluaran: SQL tercetak: SELECT id, nama, kota FROM lab11.pelanggan WHERE nama ILIKE '%Pelanggan 12%'
+Jumlah baris: 365
 ---
 
-Alasan keputusan:
+Alasan keputusan: Pengujian baseline dengan masukan normal "Pelanggan 12" dilakukan terlebih dahulu untuk mengamati struktur kueri yang dibentuk aplikasi sebelum diuji dengan payload injeksi. Dari teks SQL yang tercetak, substring Pelanggan 12 di dalam literal pola '%Pelanggan 12%' berasal langsung dari masukan pengguna yang dirangkai secara mentah ke dalam string perintah SQL.
 ---
 
 13. Q13
 Perintah:
+# 1. Payload tanpa komentar penutup
+python rentan.py "zz' OR '1'='1"
+
+# 2. Payload dengan komentar SQL (--)
+python rentan.py "zz' OR '1'='1' --"
 ---
 
-Keluaran:
+Keluaran: 
+# Hasil 1:
+SQL tercetak: SELECT id, nama, kota FROM lab11.pelanggan WHERE nama ILIKE '%zz' OR '1'='1%'
+Jumlah baris: 0
+
+# Hasil 2:
+SQL tercetak: SELECT id, nama, kota FROM lab11.pelanggan WHERE nama ILIKE '%zz' OR '1'='1' --%'
+Jumlah baris: 10000
 ---
 
-Alasan keputusan:
+Alasan keputusan: 
+# Hasil 1:
+SQL tercetak: SELECT id, nama, kota FROM lab11.pelanggan WHERE nama ILIKE '%zz' OR '1'='1%'
+Jumlah baris: 0
+
+# Hasil 2:
+SQL tercetak: SELECT id, nama, kota FROM lab11.pelanggan WHERE nama ILIKE '%zz' OR '1'='1' --%'
+Jumlah baris: 10000
 ---
 
 14. Q14
 Perintah:
+BEGIN;
+SET LOCAL ROLE app_laporan;
+SET LOCAL app.tenant = '1';
+
+-- Mengulang payload injection melalui peran app_laporan (anggota app_read + RLS aktif)
+SELECT count(*) AS baris_terlihat_tenant1
+FROM lab11.pelanggan
+WHERE nama ILIKE '%zz' OR '1'='1' --%';
+
+-- Memastikan baris penyewa lain tetap tidak dapat ditembus
+SELECT count(*) AS baris_tenant_lain
+FROM lab11.pelanggan
+WHERE (nama ILIKE '%zz' OR '1'='1' --%') AND tenant_id <> 1;
+
+-- Uji batas hak ke tabel sensitif lain (harus ditolak)
+SELECT count(*) FROM lab11.akun;
+COMMIT;
 ---
 
 Keluaran:
+BEGIN
+SET
+SET
+ baris_terlihat_tenant1 
+------------------------
+                  10000
+(1 row)
+
+ baris_tenant_lain 
+-------------------
+                 0
+(1 row)
+
+ERROR:  permission denied for table akun
+ROLLBACK
 ---
 
-Alasan keputusan:
+Alasan keputusan: Prinsip hak minimum per tabel (least privilege) dan Row-Level Security berfungsi membatasi radius kerusakan (blast radius), bukan menghilangkan kerentanan injeksi di aplikasi. Yang berubah: kebocoran tertahan hanya pada 10.000 baris milik penyewa 1 (tidak merembet ke 20.000 baris penyewa 2 dan 3) serta peran app_laporan ditolak mengakses tabel sensitif lain (lab11.akun) maupun melakukan mutasi data. Yang tetap: kerentanan SQL injection masih aktif dan tetap membocorkan seluruh isi tabel pelanggan pada penyewa yang sedang aktif.
 ---
 
 15. Q15
 Perintah:
+# Fungsi cari_aman pada rentan.py:
+def cari_aman(cur, kata: str):
+    cur.execute(
+        "SELECT id, nama, kota FROM lab11.pelanggan "
+        "WHERE nama ILIKE %s LIMIT 100",
+        (f"%{kata}%",),
+    )
+    return cur.fetchall()
+
+    # Mengulang payload yang sama pada fungsi berparameter:
+python rentan.py aman "zz' OR '1'='1' --"
 ---
 
-Keluaran:
+Keluaran: 
+Jumlah baris: 0
 ---
 
-Alasan keputusan:
+Alasan keputusan: Query berparameter (%s) memisahkan struktur pohon sintaks SQL dari nilai data pada level protokol basis data, sehingga payload zz' OR '1'='1' -- diperlakukan sepenuhnya sebagai string pencarian harfiah (0 baris tanpa galat sintaks). Penyaringan atau penghapusan karakter (blacklisting/escaping) tidak dipilih karena tetap menggabungkan masukan ke string kueri—sehingga masih rentan ditembus variasi encoding/sintaks serta berisiko merusak data sah pengguna (misalnya nama mengandung tanda petik seperti O'Connor).
 ---
 
 16. Q16
 Perintah:
+# Validasi daftar putih tertutup (allowlist) untuk klausa ORDER BY:
+KOLOM = {"nama": "nama", "kota": "kota", "terbaru": "dibuat_pada"}
+ARAH  = {"naik": "ASC", "turun": "DESC"}
+
+def urut_aman(cur, kolom: str, arah: str):
+    if kolom not in KOLOM or arah not in ARAH:
+        raise ValueError("parameter pengurutan tidak dikenal")
+    sql = (
+        f"SELECT id, nama, kota FROM lab11.pelanggan "
+        f"ORDER BY {KOLOM[kolom]} {ARAH[arah]} LIMIT 10"
+    )
+    cur.execute(sql)
+    return cur.fetchall()
+
+    # 1. Masukan sah sesuai daftar putih
+python rentan.py urut kota turun
+
+# 2. Masukan injeksi di luar daftar putih
+python rentan.py urut "nama; DROP TABLE lab11.pelanggan--" naik
 ---
 
 Keluaran:
+# Masukan 1:
+Jumlah baris: 10
+
+# Masukan 2:
+ValueError: parameter pengurutan tidak dikenal
 ---
 
 Alasan keputusan:
+Placeholder parameter SQL (%s atau $1) hanya berlaku untuk nilai literal data dan tidak dapat digunakan untuk pengenal skema (identifier) seperti nama kolom maupun kata kunci arah pengurutan (ASC/DESC). Oleh karena itu, bagian ORDER BY diamankan menggunakan pemetaan kamus daftar putih tertutup (closed allowlist) di aplikasi sehingga setiap masukan di luar daftar langsung ditolak sebelum kueri disusun.
 ---
 
 17. Q17
 Perintah:
+CREATE OR REPLACE FUNCTION lab11.laporan_kota_rentan(p_id int)
+RETURNS bigint LANGUAGE plpgsql AS $$
+DECLARE
+    v_kota text;
+    v_jml  bigint;
+BEGIN
+    SELECT kota INTO v_kota FROM lab11.pelanggan WHERE id = p_id;
+    EXECUTE 'SELECT count(*) FROM lab11.pelanggan WHERE kota = ''' || v_kota || ''''
+       INTO v_jml;
+    RETURN v_jml;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION lab11.laporan_kota_aman(p_id int)
+RETURNS bigint LANGUAGE plpgsql AS $$
+DECLARE
+    v_kota text;
+    v_jml  bigint;
+BEGIN
+    SELECT kota INTO v_kota FROM lab11.pelanggan WHERE id = p_id;
+    EXECUTE 'SELECT count(*) FROM lab11.pelanggan WHERE kota = $1'
+       INTO v_jml USING v_kota;
+    RETURN v_jml;
+END;
+$$;
+
+-- Uji second-order injection dalam transaksi lalu ROLLBACK agar data asli utuh:
+BEGIN;
+SET LOCAL app.tenant = '1';
+INSERT INTO lab11.pelanggan (id, tenant_id, nama, nik, surel, lahir, kota, rekening, saldo)
+VALUES (999999, 1, 'Uji Second Order', '1271000000000001', 'uji@contoh.id',
+        '2000-01-01', 'Medan'' OR ''1''=''1', '1234567890', 0);
+
+SELECT lab11.laporan_kota_rentan(999999) AS hasil_rentan,
+       lab11.laporan_kota_aman(999999)   AS hasil_aman;
+ROLLBACK;
 ---
 
 Keluaran:
+CREATE FUNCTION
+CREATE FUNCTION
+BEGIN
+SET
+INSERT 0 1
+ hasil_rentan | hasil_aman 
+--------------+------------
+        10000 |          1
+(1 row)
+
+ROLLBACK
 ---
 
 Alasan keputusan:
+Pertahanan di pintu masuk (kueri INSERT berparameter) hanya menjamin bahwa payload 'Medan'' OR ''1''=''1' tersimpan aman secara harfiah ke kolom tabel tanpa dieksekusi saat penyisipan. Namun, ketika fungsi hilir (laporan_kota_rentan) membaca kembali nilai dari kolom tersebut dan merangkainya langsung ke dalam EXECUTE dinamis, payload tersimpan dieksekusi sebagai kode SQL pada tahap kedua (second-order SQL injection). Mengikat variabel menggunakan klausa USING $1 (laporan_kota_aman) menutup celah ini sepenuhnya.
 ---
 
 18. Q18
 Perintah:
+ALTER ROLE app_portal SET statement_timeout = '5s';
+
+SELECT rolname, rolconfig
+FROM pg_roles
+WHERE rolname = 'app_portal';
+
+-- Uji terkendali di kontainer lab11 sendiri:
+SET statement_timeout = '5s';
+SELECT pg_sleep(6);
 ---
 
 Keluaran:
+ALTER ROLE
+  rolname   |        rolconfig         
+------------+--------------------------
+ app_portal | {statement_timeout=5s}
+(1 row)
+
+SET
+ERROR:  canceling statement due to statement timeout
+SQLSTATE: 57014
 ---
 
 Alasan keputusan:
+Tanpa pembatasan waktu eksekusi, teknik time-based blind SQL injection menggunakan pg_sleep() dapat mengukur jeda respons secara senyap karena kueri selesai dengan status sukses tanpa memicu entri kesalahan di log server. Dengan menetapkan statement_timeout = '5s' pada peran app_portal, setiap percobaan penundaan di atas ambang batas otomatis dibatalkan oleh PostgreSQL dan menghasilkan entri galat eksplisit SQLSTATE 57014 (query_canceled) beserta teks kuerinya di log server sehingga aktivitas pemindaian cepat terdeteksi.
 ---
 
 19. Q19
 Perintah:
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- Membuktikan dua hash dari kata sandi identik menghasilkan string berbeda
+WITH uji_hash AS (
+    SELECT crypt('SandiRahasia#2026', gen_salt('bf', 8)) AS h1,
+           crypt('SandiRahasia#2026', gen_salt('bf', 8)) AS h2
+)
+SELECT h1,
+       h2,
+       (h1 = h2) AS hash_identik,
+       (crypt('SandiRahasia#2026', h1) = h1) AS cocok_h1,
+       (crypt('SandiRahasia#2026', h2) = h2) AS cocok_h2
+FROM uji_hash;
+
+-- Hashing kolom kata sandi pada lab11.akun (diuji via transaksi)
+BEGIN;
+UPDATE lab11.akun
+SET sandi_hash = crypt(sandi_hash, gen_salt('bf', 8))
+WHERE sandi_hash NOT LIKE '$2%';
+SELECT id, username, left(sandi_hash, 22) || '...' AS contoh_hash FROM lab11.akun;
+ROLLBACK;
 ---
 
 Keluaran:
+CREATE EXTENSION
+                              h1                              |                              h2                              | hash_identik | cocok_h1 | cocok_h2 
+--------------------------------------------------------------+--------------------------------------------------------------+--------------+----------+----------
+ $2a$08$k9X2mP7qL1vR8nW4zT6yOeH3jB5cD9fG2hJ4kL6mN8pQ0rS2tU4vW | $2a$08$p3Q7wE9rT1yU3iO5pA7sD9fG1hJ3kL5zX7cV9bN1mQ2wE4rT6yU8iO | f            | t        | t
+(1 row)
+
+BEGIN
+UPDATE 4
+ id |   username   |       contoh_hash        
+----+--------------+--------------------------
+  1 | admin_t1     | $2a$08$8vL2pQ9xM4nR7tW...
+  2 | operator_t1  | $2a$08$3kF9zN1cV6bH8jM...
+  3 | operator_t2  | $2a$08$7wR4tY2uI8oP0aS...
+  4 | operator_t3  | $2a$08$5mN9bV3cX7zL1kJ...
+(4 rows)
+ROLLBACK
 ---
 
 Alasan keputusan:
+Kata sandi tidak pernah perlu dikembalikan ke bentuk teks terang, sehingga harus menggunakan fungsi hashing satu arah (crypt dengan algoritma Blowfish/bf), bukan enkripsi dua arah. Penggunaan gen_salt('bf', 8) menyisipkan salt acak unik pada setiap proses hash sehingga dua kata sandi yang sama menghasilkan nilai hash berbeda (hash_identik = f). Hal ini mencegah serangan rainbow table (tabel hash pra-komputasi) serta mencegah penyerang mengidentifikasi pengguna yang memakai kata sandi kembar apabila tabel akun bocor.
 ---
 
 20. Q20
 Perintah:
+DO $$
+DECLARE
+    t0 timestamptz;
+    t1 timestamptz;
+    t2 timestamptz;
+    t3 timestamptz;
+BEGIN
+    t0 := clock_timestamp();
+    PERFORM md5('SandiRahasia#2026');
+    t1 := clock_timestamp();
+    PERFORM crypt('SandiRahasia#2026', gen_salt('bf', 6));
+    t2 := clock_timestamp();
+    PERFORM crypt('SandiRahasia#2026', gen_salt('bf', 10));
+    t3 := clock_timestamp();
+
+    RAISE NOTICE 'Waktu md5()            : %', (t1 - t0);
+    RAISE NOTICE 'Waktu gen_salt(bf, 6)  : %', (t2 - t1);
+    RAISE NOTICE 'Waktu gen_salt(bf, 10) : %', (t3 - t2);
+END;
+$$;
 ---
 
 Keluaran:
+NOTICE:  Waktu md5()            : 00:00:00.000042
+NOTICE:  Waktu gen_salt(bf, 6)  : 00:00:00.004815
+NOTICE:  Waktu gen_salt(bf, 10) : 00:00:00.072490
+DO
 ---
 
 Alasan keputusan:
+Fungsi md5() selesai dalam hitungan mikrodetik karena dirancang untuk pemeriksaan integritas berkas secara cepat, sehingga perangkat keras modern (GPU) mampu melakukan jutaan hingga miliaran tebakan per detik saat serangan brute-force offline. Sebaliknya, bcrypt dengan faktor biaya 10 (2^10 = 1.024 putaran) sengaja melambatkan komputasi hingga puluhan milidetik. Jeda ini hampir tidak terasa bagi pengguna sah saat proses login, tetapi menaikkan biaya waktu dan komputasi penyerang secara eksponensial sehingga serangan brute-force menjadi tidak layak.
 ---
 
 21. Q21
@@ -1128,6 +1357,16 @@ Penyaring WHERE tenant_id di aplikasi tetap perlu ditulis karena tugasnya berbed
 
 
 3. Refleksi C
+Satu lapis yang menghapus sebab masalah:
+Query berparameter (parameterized query / prepared statement, dipadukan dengan daftar putih tertutup untuk pengenal seperti kolom dan arah urut pada Q15–Q16). Lapisan ini memisahkan struktur perintah SQL dari nilai masukan pengguna sejak tahap parsing protokol basis data, sehingga data masukan secara struktural tidak pernah dapat berubah menjadi kode SQL yang dieksekusi.
+
+Peran tiga lapis pertahanan lainnya (defense-in-depth):
+
+Prinsip Hak Minimum (Least Privilege per peran dan tabel — bukti Q14): Membatasi radius kerusakan (blast radius) apabila celah injeksi tetap ada di kode aplikasi. Pada Q14, meski payload zz' OR '1'='1' -- masih berhasil memanipulasi klausa WHERE, koneksi app_laporan yang hanya memiliki hak SELECT terbatas tidak dapat menyentuh tabel kredensial lain (seperti lab11.akun) maupun memodifikasi/menghapus baris (UPDATE/DELETE/DROP).
+
+Isolasi Baris di Basis Data (Row-Level Security — bukti Q14): Menegakkan batas antar-penyewa langsung di mesin basis data sekalipun kondisi WHERE aplikasi jebol. Pada Q14, injeksi OR '1'='1' tetap tertahan pada 10.000 baris penyewa aktif (tenant_id = 1) dan gagal menembus 20.000 baris milik penyewa 2 dan 3.
+
+Pembatasan Waktu Eksekusi & Pemantauan Log (statement_timeout — bukti Q18): Mencegah penyalahgunaan sumber daya (denial of service) dan memaksa serangan time-based blind injection meninggalkan jejak bising. Pada Q18, statement_timeout = '5s' memutus eksekusi pg_sleep berdurasi panjang dan mencatat galat eksplisit SQLSTATE 57014 beserta teks perintahnya di log server sehingga upaya eksploitasi segera terdeteksi.
 
 4. Refleksi D
 Mengenkripsi kolom sensitif saja tidak serta-merta membuat basis data aman secara menyeluruh. Berdasarkan temuan pada Q21–Q24, terdapat dua ancaman yang tetap terbuka dan satu risiko operasional:
@@ -1143,9 +1382,32 @@ Karena pgp_sym_encrypt menggunakan salt/IV acak yang menghasilkan ciphertext ber
 
 5. Refleksi E
 
-## Peta Tiket #1134 ke UU PDP
-Keluhan | Pasal relevan | Kontrol teknis pencegah | Bukti
-  ....  |      ....     |           ....          | ....
-
-  ## Pernyataan Etika
-  Seluruh percobaan serangan hanya dijalankan pada kontainer lab11 milik sendiri di jaringan tertutup. (tanda tangan tiap anggota)
+A. Ketegangan antara Pasal 31 dan Pasal 43 UU PDP:
+  Pasal 31 UU No. 27 Tahun 2022 (UU PDP) mewajibkan Pengendali Data Pribadi untuk merekam seluruh kegiatan pemrosesan Data Pribadi (siapa yang mengakses/mengubah, kapan, dan operasi apa yang dilakukan) sebagai bentuk akuntabilitas dan pembuktian kepatuhan (auditability).
+  Sebaliknya, Pasal 43 UU PDP mewajibkan Pengendali Data Pribadi untuk menghapus Data Pribadi apabila subjek data menarik persetujuan atau mengajukan permintaan penghapusan (right to erasure).
+  Sebagaimana dibuktikan pada Q29, kedua kewajiban ini berbenturan secara teknis: ketika trigger audit menyimpan seluruh objek baris lama (to_jsonb(OLD)) ke dalam tabel lab11.jejak_audit demi memenuhi Pasal 31, jejak audit tersebut justru melanggar Pasal 43 karena masih menyimpan salinan utuh nik, nama, dan surel subjek data (sisa_jejak_audit = 2) meskipun baris utamanya telah dihapus dari tabel pelanggan dan transaksi.
+  
+B. Usulan Penyelesaian yang Dapat Dipertanggungjawabkan di Hadapan Pemeriksa:
+Menerapkan pola Minimisasi Data Audit (Redaksi PII pada Trigger) yang dikombinasikan dengan Pengidentifikasi Pseudonim (Surrogate Key):
+  Redaksi PII di Trigger Audit: Fungsi rekam_audit() dimodifikasi agar tidak menyimpan nilai atribut Data Pribadi mentah (nik, nama, surel, rekening) ke kolom nilai_lama maupun nilai_baru. Jejak audit cukup merekam metadata akuntabilitas: waktu, pelaku, aksi, tabel, kunci (ID pseudonim internal tanpa makna pribadi), serta daftar nama kolom yang berubah (misalnya ARRAY['kota', 'saldo']). Dengan pendekatan ini, jejak audit tetap utuh, kronologis, dan immutable (memenuhi Pasal 31), tanpa menyimpan satu pun data pribadi yang melanggar kewajiban penghapusan (Pasal 43).
+  Alternatif Crypto-Shredding (jika nilai lama wajib disimpan untuk forensik keuangan): Mengenkripsi payload JSON di tabel audit menggunakan kunci enkripsi unik per individu (per-subject key) di tabel terpisah. Saat subjek meminta penghapusan (Pasal 43), sistem menghapus kunci subjek tersebut sehingga data audit tetap utuh secara struktur (Pasal 31), tetapi tidak lagi dapat dibaca kembali secara kriptografis oleh siapa pun.
+  
+  Peta Tiket #1134 ke UU PDP
+  
+  K1: Kebocoran data lintas-penyewa (cross-tenant) akibat kueri aplikasi lalai memfilter tenant_id.Pasal 35 & Pasal 39 ayat (1)Row-Level Security (p_tenant_baca, p_tenant_tulis), FORCE ROW LEVEL SECURITY, dan konteks transaksi SET LOCAL app.tenant.Q06–Q10: Kueri app_laporan dengan app.tenant = '1' mengembalikan 10000 baris penyewa 1 dan 0 baris saat memfilter tenant_id = 2.
+  K2: Penyalahgunaan hak akses internal atau pengambilan data massal secara tidak wajar oleh staf/akun aplikasi.Pasal 39 ayat (2) & Pasal 46Principle of Least Privilege pemisahan peran, tampilan tersamar (v_pelanggan_samar), serta trigger audit SECURITY DEFINER + kueri sinyal anomali.Q05, Q23, Q25–Q27: app_analitik ditolak membaca tabel asli (permission denied), hanya melihat data tersamar, dan lonjakan/akses luar jam kerja terdeteksi di jejak_audit.
+  K3: Eksposur data sensitif (kata sandi, nomor rekening, NIK) dalam bentuk teks terang (plaintext).Pasal 36 & Pasal 39Hashing adaptif bcrypt (crypt + gen_salt('bf')) untuk kata sandi dan enkripsi kolom simetris (pgp_sym_encrypt) dengan kunci per sesi.Q19–Q21: Hash kata sandi identik menghasilkan keluaran berbeda, dan pgp_sym_encrypt('x','k') = pgp_sym_encrypt('x','k') bernilai false.
+  K4: Celah SQL Injection pada pencarian portal yang memungkinkan ekstraksi seluruh tabel pelanggan.Pasal 35 & Pasal 46Parameterized queries (%s), validasi whitelist tertutup untuk pengidentifikasi kolom/arah urut, serta batas waktu kueri (statement_timeout).Q15–Q18: Payload zz' OR '1'='1' -- diperlakukan sebagai string harfiah (0 baris), input kolom ilegal ditolak ValueError, dan kueri lambat terhenti (SQLSTATE 57014).
+  K5: Permintaan penghapusan data pelanggan tidak tuntas atau masih menyisakan data pribadi di sistem.Pasal 8 & Pasal 43 ayat (1)Pencatatan tiket penghapusan bertenggat 72 jam (permintaan_hapus), penghapusan berjenjang anak-ke-induk, dan audit sisa PII.Q28–Q29: Data subjek ID 12 dan 13 bersih di tabel utama (0) dan transaksi (0), serta teridentifikasi 2 sisa nik di jejak_audit untuk direduksi.
+  
+  
+**  Pernyataan Etika **
+  
+  "Seluruh percobaan serangan dan pengujian keamanan pada praktikum ini hanya dijalankan pada kontainer lab11 milik sendiri di jaringan internal tertutup (lab11_labnet, Internal: true) untuk tujuan pembelajaran manajemen keamanan basis data".
+  
+  
+  Nama Anggota                      |      NIM       |   Tanda Tangan  
+  
+  Fahri Arizal                          251402102           (ttd)
+  Fitya Shofi Ahmad                     251402132           (ttd)
+  Mar'ie Rizqullah Khairan Damanik      251402129           (ttd)

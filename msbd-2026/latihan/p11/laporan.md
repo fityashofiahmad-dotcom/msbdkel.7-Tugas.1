@@ -211,12 +211,24 @@ Alasan keputusan: Prinsip hak minimum per tabel (least privilege) dan Row-Level 
 
 15. Q15
 Perintah:
+# Fungsi cari_aman pada rentan.py:
+def cari_aman(cur, kata: str):
+    cur.execute(
+        "SELECT id, nama, kota FROM lab11.pelanggan "
+        "WHERE nama ILIKE %s LIMIT 100",
+        (f"%{kata}%",),
+    )
+    return cur.fetchall()
+
+    # Mengulang payload yang sama pada fungsi berparameter:
+python rentan.py aman "zz' OR '1'='1' --"
 ---
 
-Keluaran:
+Keluaran: 
+Jumlah baris: 0
 ---
 
-Alasan keputusan:
+Alasan keputusan: Query berparameter (%s) memisahkan struktur pohon sintaks SQL dari nilai data pada level protokol basis data, sehingga payload zz' OR '1'='1' -- diperlakukan sepenuhnya sebagai string pencarian harfiah (0 baris tanpa galat sintaks). Penyaringan atau penghapusan karakter (blacklisting/escaping) tidak dipilih karena tetap menggabungkan masukan ke string kueri—sehingga masih rentan ditembus variasi encoding/sintaks serta berisiko merusak data sah pengguna (misalnya nama mengandung tanda petik seperti O'Connor).
 ---
 
 16. Q16

@@ -528,14 +528,40 @@ Plaintext
 Alasan keputusan: Sinyal yang paling mungkin menangkap keluhan K2 (penyalahgunaan akses internal atau eksfiltrasi/perubahan massal secara tidak wajar oleh staf/akun aplikasi di waktu mencurigakan) adalah kombinasi Sinyal 1 (Lonjakan baris per peran) dan Sinyal 2 (Akses di luar jam kerja WIB). Sinyal 1 mendeteksi anomali volume (bulk scraping atau mass update), sedangkan Sinyal 2 mendeteksi anomali temporal saat operasional kantor sudah tutup.
 
 28. Q28
+
 Perintah:
----
+
+SQL
+CREATE TABLE lab11.permintaan_hapus (
+  id            serial PRIMARY KEY,
+  subjek_id     int NOT NULL,
+  alasan        text NOT NULL,
+  diterima_pada timestamptz NOT NULL DEFAULT now(),
+  tenggat       timestamptz NOT NULL DEFAULT now() + interval '72 hours',
+  selesai_pada  timestamptz,
+  status        text NOT NULL DEFAULT 'DIPROSES'
+);
+
+SELECT column_name, data_type, column_default
+FROM information_schema.columns
+WHERE table_schema = 'lab11' AND table_name = 'permintaan_hapus';
 
 Keluaran:
----
 
-Alasan keputusan:
----
+Plaintext
+CREATE TABLE
+  column_name  |          data_type          |          column_default          
+---------------+-----------------------------+----------------------------------
+ id            | integer                     | nextval('permintaan_hapus_id_seq'::regclass)
+ subjek_id     | integer                     | 
+ alasan        | text                        | 
+ diterima_pada | timestamp with time zone    | now()
+ tenggat       | timestamp with time zone    | (now() + '72:00:00'::interval)
+ selesai_pada  | timestamp with time zone    | 
+ status        | text                        | 'DIPROSES'::text
+(7 rows)
+
+Alasan keputusan: Menggunakan DEFAULT now() + interval '72 hours' alih-alih kolom GENERATED ALWAYS AS ... STORED karena fungsi now() bersifat STABLE (bergantung pada waktu transaksi), sedangkan PostgreSQL 17 mewajibkan ekspresi pada kolom generated bersifat IMMUTABLE (hasilnya selalu tetap untuk input yang sama). Nilai tenggat 72 jam ini selaras dengan batas waktu pemenuhan hak penghapusan data pribadi dalam regulasi perlindungan data (UU PDP).
 
 29. Q29
 Perintah:
